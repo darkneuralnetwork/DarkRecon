@@ -6,6 +6,8 @@
 
 **A single Go binary that runs the entire Phase-1 recon lifecycle — from subdomain discovery to a prioritized, exploitation-ready target list — with a live web UI, REST API, and MCP integration for LLM agents.**
 
+Engineered by [**Team Dark Neural Network (DNN)**](https://darkneuralnetwork.com)
+
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/badge/Use-Authorized%20Testing%20Only-red)](#license-disclaimer)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-lightgrey)](#prerequisites)
@@ -780,16 +782,30 @@ dark-recon/
 
 ---
 
-## License & Disclaimer
+
+## ⚖️ License
 
 This project is intended for **authorized security testing and educational use only**. Always obtain proper written authorization before scanning any target you do not own. The authors are not responsible for misuse or damage caused by this tool.
+
+DarkRecon is proudly open-source, released under the **GNU General Public License v3.0 (GPL-3.0)**. 
+
+You are free to use, study, modify, and distribute this software, provided all derivative works remain under the GPL-3.0 license. [Read the full license here](LICENSE).
 
 ---
 
 <div align="center">
 
+### Engineered by [Dark Neural Network](https://darkneuralnetwork.com)
+*Building the next generation of intelligent autonomous systems.*
+
+🌐 [Website](https://darkneuralnetwork.com) &nbsp;&nbsp;•&nbsp;&nbsp; ⭐ Star on GitHub &nbsp;&nbsp;•&nbsp;&nbsp; 🤝 Join the Community
+
 **Dark-Recon v1.0.0** — *Built with Go, structured logging, and a passion for automated recon.*
 
 🦇 From domain → prioritized attack plan, in minutes.
 
+**DarkCode is not just an assistant. It is a foundation for building intelligent systems.**
+
 </div>
+
+---
