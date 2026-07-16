@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Subdomain Detail</title>
+ <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <a href="#" id="back-link" class="back-link">← Back</a>
+ <h1 id="page-title">Loading...</h1>
+ </div>
+ <div class="page-header-actions" id="page-actions"></div>
+ </div>
+ <div id="subdomain-content"><p class="text-muted">Loading subdomain data...</p></div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ // Extract target and subdomain from URL: /target/{target}/subdomain/{subdomain}
+ const parts = window.location.pathname.split('/').filter(Boolean);
+ const TARGET = parts.length >= 1 ? decodeURIComponent(parts[1]) : '';
+ const SUBDOMAIN = parts.length >= 3 ? decodeURIComponent(parts[3]) : '';
+
+ document.getElementById('page-title').textContent = SUBDOMAIN;
+ document.getElementById('back-link').href = `/target/${TARGET}`;
+
+ async function loadSubdomainDetail() {
+ try {
+ const resp = await fetch(`/api/target/${TARGET}/subdomain/${SUBDOMAIN}`);
+ if (!resp.ok) throw new Error('Subdomain data not found');
+ const data = await resp.json();
+ renderSubdomainDetail(data);
+ } catch (e) {
+ document.getElementById('subdomain-content').innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h2>${e.message}</h2></div>`;
+ }
+ }
+
+ function parseJSONField(s) {
+ if (!s || s === '') return [];
+ try {
+ const v = JSON.parse(s);
+ // Go's json.Marshal(nil slice) produces the string "null", which
+ // JSON.parse turns into JS null. Treat null/non-arrays as [] so
+ // .slice()/.forEach() callers never crash.
+ return Array.isArray(v) ? v : [];
+ } catch { return []; }
+ }
+
+ function renderSubdomainDetail(data) {
+ const info = data.info || null;
+ const pri = data.priority || null;
+ const vulns = data.vulnerabilities || [];
+ const takeover = data.takeover || [];
+ const paramUrls = data.param_urls || [];
+ const dirs = data.directories || [];
+
+ let html = '';
+
+ // Subdomain Info
+ if (info) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Subdomain Info</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="meta-grid">';
+ html += `<div class="meta-item"><strong>URL:</strong> <a href="${info.url || ''}" target="_blank" class="subdomain-link">${info.url || ''}</a></div>`;
+ html += `<div class="meta-item"><strong>Status:</strong> ${info.status_code || 'N/A'}</div>`;
+ html += `<div class="meta-item"><strong>Title:</strong> ${info.title || 'N/A'}</div>`;
+ html += `<div class="meta-item"><strong>Webserver:</strong> ${info.webserver || 'N/A'}</div>`;
+ html += `<div class="meta-item"><strong>CDN:</strong> ${info.cdn || 'N/A'}</div>`;
+ html += `<div class="meta-item"><strong>Content Length:</strong> ${info.content_length || 'N/A'}</div>`;
+ html += '</div>';
+ const techDetected = parseJSONField(info.tech_detected);
+ if (techDetected.length > 0) {
+ html += '<div class="tech-list" style="margin-top: 10px;"><strong>Technologies:</strong> ';
+ techDetected.forEach(t => { html += `<span class="tech-badge">${t}</span>`; });
+ html += '</div>';
+ }
+ html += '</div></div>';
+ }
+
+ // Priority Score Breakdown
+ if (pri && pri.reasons) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Priority Score Breakdown</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="priority-breakdown">';
+ html += `<div class="priority-score-big">${Math.round(pri.priority_score || 0)} <span class="priority-max">/ 100</span></div>`;
+ html += '<div class="reasons-list">';
+ (pri.reasons || []).forEach(r => {
+ const factor = typeof r === 'object' ? (r.factor || '') : '';
+ const detail = typeof r === 'object' ? (r.detail || '') : r;
+ const weight = typeof r === 'object' ? (r.weight || 0) : 0;
+ html += `<div class="reason-row"><span class="reason-factor">${factor}</span><span class="reason-detail">${detail}</span><span class="reason-weight">+${weight}</span></div>`;
+ });
+ html += '</div></div></div></div>';
+
+ // Priority badge in header
+ const score = pri.priority_score || 0;
+ const tier = score >= 70 ? 'critical' : (score >= 45 ? 'high' : (score >= 25 ? 'medium' : 'low'));
+ document.getElementById('page-actions').innerHTML = `<span class="tier-badge tier-badge-${tier}">Score: ${Math.round(score)}</span>`;
+ }
+
+ // Vulnerabilities
+ html += renderVulnTable(vulns, vulns.length, false);
+
+ // Takeover Status
+ if (takeover && takeover.length > 0) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Takeover Status</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body">';
+ takeover.forEach(t => {
+ const cls = t.vulnerable ? 'alert-critical' : 'alert-ok';
+ html += `<div class="${cls}">`;
+ if (t.vulnerable) {
+ html += `<strong> VULNERABLE</strong> to subdomain takeover via ${t.service || 'unknown service'}`;
+ if (t.fingerprint) html += `<br><span class="mono small">Fingerprint: ${t.fingerprint}</span>`;
+ } else {
+ html += ' Not vulnerable to subdomain takeover';
+ }
+ html += '</div>';
+ });
+ html += '</div></div>';
+ }
+
+ // URLs with Parameters
+ html += `<div class="section"><div class="section-header"><span class="section-title"> URLs with Parameters <span class="section-badge">${paramUrls.length} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (paramUrls.length > 0) {
+ html += '<div class="url-list">';
+ paramUrls.forEach(u => {
+ html += '<div class="url-item">';
+ html += `<span class="url-method">${u.method || 'GET'}</span>`;
+ html += `<a href="${u.url || ''}" target="_blank" class="url-link">${u.url || ''}</a>`;
+ if (u.param_names && u.param_names.length > 0) {
+ html += '<div class="param-tags">';
+ u.param_names.forEach(p => { html += `<span class="param-tag">${p}</span>`; });
+ html += '</div>';
+ }
+ html += '</div>';
+ });
+ html += '</div>';
+ } else {
+ html += '<p class="text-muted">No URLs with parameters found.</p>';
+ }
+ html += '</div></div>';
+
+ // Exposed Directories
+ html += renderDirList(dirs, dirs.length, 'Exposed Directories', ' Filter directories...');
+
+ // Suggested Manual Tests
+ if (pri && pri.suggested_manual_tests && pri.suggested_manual_tests.length > 0) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Suggested Manual Tests</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="suggestions-list">';
+ pri.suggested_manual_tests.forEach(s => { html += `<div class="suggestion-item">→ ${s}</div>`; });
+ html += '</div></div></div>';
+ }
+
+ // Tech Stack
+ if (pri && pri.tech_stack && pri.tech_stack.length > 0) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Tech Stack</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="tech-list">';
+ pri.tech_stack.forEach(t => { html += `<span class="tech-badge">${t}</span>`; });
+ html += '</div></div></div>';
+ }
+
+ // Missing Headers
+ if (pri && pri.missing_headers && pri.missing_headers.length > 0) {
+ html += '<div class="section"><div class="section-header"><span class="section-title"> Missing Security Headers</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><ul class="missing-headers-list">';
+ pri.missing_headers.forEach(h => { html += `<li class="missing-header-item"> ${h}</li>`; });
+ html += '</ul></div></div>';
+ }
+
+ document.getElementById('subdomain-content').innerHTML = html;
+
+ // Re-init interactive elements
+ initCollapsibleSections();
+ initVulnExpandableRows();
+ initVulnFilter();
+ initDirFilter();
+ }
+
+ function renderVulnTable(vulns, total, showSubdomain) {
+ let html = `<div class="section"><div class="section-header"><span class="section-title"> Vulnerabilities <span class="section-badge">${total} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (vulns && vulns.length > 0) {
+ html += '<div class="filter-bar">';
+ const searchPlaceholder = showSubdomain ? ' Search by name, subdomain, template, CVE...' : ' Search by name, template, CVE...';
+ html += `<input type="text" id="vuln-search" class="filter-input" placeholder="${searchPlaceholder}" />`;
+ html += '<div class="filter-chip critical" data-sev="critical"> Critical</div>';
+ html += '<div class="filter-chip high" data-sev="high"> High</div>';
+ html += '<div class="filter-chip medium" data-sev="medium"> Medium</div>';
+ html += '<div class="filter-chip low" data-sev="low"> Low</div>';
+ html += '<div class="filter-chip info" data-sev="info"> Info</div>';
+ html += '</div>';
+
+ html += '<div class="table-container"><table class="data-table" id="vuln-table"><thead><tr>';
+ html += '<th onclick="sortTable(\'vuln-table\', 0)">Severity</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 1)">Name</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 2)">Template ID</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 3)">Type</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 4)">Endpoint</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 5)">CVE</th>';
+ html += '<th></th>';
+ html += '</tr></thead><tbody>';
+
+ vulns.forEach((v, idx) => {
+ const sev = (v.severity || 'info').toLowerCase();
+ const tmplId = v.template_id || 'N/A';
+ const cveIds = parseJSONField(v.cve_ids);
+ const cveStr = cveIds.join(', ');
+ const refs = parseJSONField(v.reference);
+ const extracted = parseJSONField(v.extracted_results);
+ const desc = v.description || '';
+
+ html += `<tr class="vuln-row sev-${sev}"
+ data-vuln-id="${idx + 1}"
+ data-vuln-name="${escapeAttr(v.name || '')}"
+ data-vuln-severity="${sev}"
+ data-vuln-template="${escapeAttr(tmplId)}"
+ data-vuln-type="${escapeAttr(v.type || '')}"
+ data-vuln-url="${escapeAttr(v.url || '')}"
+ data-vuln-subdomain="${escapeAttr(v.subdomain || '')}"
+ data-vuln-cve="${escapeAttr(cveStr)}"
+ data-vuln-desc="${escapeAttr(desc)}"
+ data-vuln-matcher="${escapeAttr(v.matcher_name || '')}"
+ data-vuln-extracted="${escapeAttr(extracted.join('; '))}"
+ data-vuln-refs="${escapeAttr(refs.join(', '))}"
+ onclick="showVulnModal(${idx + 1})">`;
+ html += `<td><span class="sev-badge sev-badge-${sev}">${sev.toUpperCase()}</span></td>`;
+ html += `<td>${escapeHtml(v.name || '')}</td>`;
+ html += `<td class="mono small">${tmplId}</td>`;
+ html += `<td>${v.type || 'N/A'}</td>`;
+ const urlDisplay = v.url ? (v.url.length > 60 ? v.url.substring(0, 60) + '...' : v.url) : 'N/A';
+ html += `<td class="mono small"><a href="${v.url || '#'}" target="_blank" class="subdomain-link" onclick="event.stopPropagation()">${urlDisplay}</a></td>`;
+ html += `<td>${cveStr || 'N/A'}</td>`;
+ html += '<td><span class="expand-icon">▶</span></td>';
+ html += '</tr>';
+
+ // Expandable detail row
+ html += `<tr class="vuln-expand-row" data-vuln-id="${idx + 1}"><td colspan="7"><div class="vuln-detail-panel">`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Severity</span><span class="vuln-detail-value" style="color: var(--${sev}); font-weight: 700;">${sev.toUpperCase()}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Template ID</span><span class="vuln-detail-value mono">${tmplId}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Type</span><span class="vuln-detail-value">${v.type || 'N/A'}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Endpoint / URL</span><span class="vuln-detail-value url">${v.url ? `<a href="${v.url}" target="_blank">${v.url}</a>` : 'N/A'}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">CVE IDs</span><span class="vuln-detail-value" style="color: var(--critical); font-weight: 600;">${cveStr || 'N/A'}</span></div>`;
+ if (v.matcher_name) {
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Matcher</span><span class="vuln-detail-value mono">${v.matcher_name}</span></div>`;
+ }
+ if (extracted.length > 0) {
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Extracted Results</span><span class="vuln-detail-value mono">${extracted.join('; ')}</span></div>`;
+ }
+ if (desc) {
+ html += `<div class="vuln-detail-description">${desc}</div>`;
+ }
+ if (refs.length > 0) {
+ html += '<div class="vuln-detail-refs">';
+ refs.slice(0, 5).forEach(ref => {
+ const display = ref.length > 70 ? ref.substring(0, 70) + '...' : ref;
+ html += `<a href="${ref}" target="_blank">${display}</a>`;
+ });
+ html += '</div>';
+ }
+ html += '</div></td></tr>';
+ });
+
+ html += '</tbody></table></div>';
+ html += '<div id="vuln-pagination" class="pagination-controls" style="display: none;">';
+ html += '<div class="pagination-info"><span id="vuln-page-info"></span></div>';
+ html += '<div class="pagination-actions">';
+ html += '<select id="vuln-page-size" onchange="changeVulnPageSize(this.value)"><option value="25">25 / page</option><option value="50" selected>50 / page</option><option value="100">100 / page</option></select>';
+ html += '<button class="btn btn-small btn-secondary" id="vuln-prev-page" onclick="changeVulnPage(-1)">← Prev</button>';
+ html += '<button class="btn btn-small btn-secondary" id="vuln-next-page" onclick="changeVulnPage(1)">Next →</button>';
+ html += '</div></div>';
+ } else {
+ html += `<div class="alert-ok"> No vulnerabilities found${showSubdomain ? '' : ' for this subdomain'}.</div>`;
+ }
+ html += '</div></div>';
+ return html;
+ }
+
+ function renderDirList(directories, total, title, placeholder) {
+ if (!directories || directories.length === 0) return '';
+ let html = `<div class="section"><div class="section-header"><span class="section-title"> ${title} <span class="section-badge">${total} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ html += `<div class="filter-bar"><input type="text" id="dir-search" class="filter-input" placeholder="${placeholder}" /></div>`;
+ html += '<div class="dir-url-list">';
+ directories.forEach(d => {
+ const sc = d.status_code || 0;
+ const url = d.url || d.path || '';
+ let pillClass = 'sother';
+ if (sc === 200) pillClass = 's200';
+ else if ([301, 302, 307].includes(sc)) pillClass = 's301';
+ else if ([401, 403, 405].includes(sc)) pillClass = 's403';
+ html += `<div class="dir-url-item">`;
+ html += `<span class="status-pill ${pillClass}">${sc}</span>`;
+ html += `<a href="${url}" target="_blank" class="dir-url">${url}</a>`;
+ html += `<span class="dir-size">${d.content_length || 'N/A'} bytes</span>`;
+ html += '</div>';
+ });
+ html += '</div></div></div>';
+ return html;
+ }
+
+ function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+ function escapeAttr(s) { return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+ loadSubdomainDetail();
+ </script>
+</body>
+</html>

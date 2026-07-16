@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Target Detail</title>
+ <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <a href="/" class="back-link">← Dashboard</a>
+ <h1 id="page-title">Loading...</h1>
+ </div>
+ <div class="page-header-actions">
+ <button onclick="exportTarget(getTargetName())" class="btn btn-secondary">Export JSON</button>
+ <button onclick="exportCSV(getTargetName())" class="btn btn-secondary">Export CSV</button>
+ <button onclick="exportHandoff(getTargetName())" class="btn btn-secondary">Phase 2 Handoff</button>
+ <button onclick="refreshResults()" class="btn btn-secondary" id="refresh-btn">↻ Refresh</button>
+ <button onclick="deleteTarget(getTargetName())" class="btn btn-danger" title="Permanently delete this target and all its scan data">🗑 Delete</button>
+ </div>
+ </div>
+ <div id="target-content"><div class="loading-spinner"></div></div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ // Extract target from URL: /target/{target_name}
+ const pathParts = window.location.pathname.split('/').filter(Boolean);
+ const TARGET = pathParts.length >= 1 ? decodeURIComponent(pathParts[1]) : '';
+ document.getElementById('page-title').textContent = TARGET;
+
+ function getTargetName() { return TARGET; }
+
+ let refreshInterval = null;
+
+ async function loadTargetDetail() {
+ try {
+ const resp = await fetch(`/api/target/${TARGET}`);
+ if (!resp.ok) throw new Error('Target not found');
+ const data = await resp.json();
+ renderTargetDetail(data);
+ } catch (e) {
+ document.getElementById('target-content').innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h2>${e.message}</h2></div>`;
+ }
+ }
+
+ function refreshResults() {
+ loadTargetDetail();
+ showToast('Results refreshed');
+ }
+
+ function tierFromScore(score) {
+ if (score >= 70) return 'critical';
+ if (score >= 45) return 'high';
+ if (score >= 25) return 'medium';
+ return 'low';
+ }
+
+ function parseJSONField(s) {
+ if (!s || s === '') return [];
+ try {
+ const v = JSON.parse(s);
+ // Go's json.Marshal(nil slice) produces the string "null", which
+ // JSON.parse turns into JS null. Treat null/non-arrays as [] so
+ // .slice()/.forEach() callers never crash.
+ return Array.isArray(v) ? v : [];
+ } catch { return []; }
+ }
+
+ function renderTargetDetail(data) {
+ const meta = data.meta || {};
+ const subs = data.subdomains || [];
+ const live = data.live_subdomains || [];
+ const vulns = data.vulnerabilities || {};
+ const vulnList = vulns.vulnerabilities || [];
+ const sevCounts = vulns.by_severity || {};
+ const takeovers = vulns.takeover_results || [];
+ const urls = data.urls_with_params || [];
+ const dirs = data.directories || {};
+ const dirList = dirs.directories || [];
+ const pri = data.priority_ranking || {};
+ const priList = pri.priority_list || [];
+ const techDetection = data.tech_detection || [];
+ const missingHeaders = data.missing_headers || [];
+ // Phase-1 advanced module results
+ const p1 = data.phase1 || {};
+ const p1Findings = p1.findings || [];
+ const p1Ports = p1.ports || [];
+ const p1Secrets = p1.secrets || [];
+ const p1Params = p1.params || [];
+ const p1JSFiles = p1.js_files || [];
+ const p1JSFindings = p1.js_findings || [];
+ const p1HostIntel = p1.host_intel || [];
+ const p1Passive = p1.passive_recon || [];
+ const p1Active = p1Findings.length || p1Ports.length || p1Secrets.length || p1Params.length || p1JSFiles.length || p1HostIntel.length || p1Passive.length;
+
+ let html = '';
+
+ // Quick Stats (clickable → scroll to the matching list section)
+ html += '<div class="stats-grid">';
+ html += `<div class="stat-card clickable" onclick="scrollToSection('subdomains-section')"><div class="stat-value">${subs.length}</div><div class="stat-label">Subdomains</div></div>`;
+ html += `<div class="stat-card clickable" onclick="scrollToSection('live-section')"><div class="stat-value">${live.length}</div><div class="stat-label">Live</div></div>`;
+ html += `<div class="stat-card stat-critical" onclick="scrollToSection('vuln-section')"><div class="stat-value">${sevCounts.critical || 0}</div><div class="stat-label">Critical</div></div>`;
+ html += `<div class="stat-card stat-high" onclick="scrollToSection('vuln-section')"><div class="stat-value">${sevCounts.high || 0}</div><div class="stat-label">High</div></div>`;
+ html += `<div class="stat-card stat-medium" onclick="scrollToSection('vuln-section')"><div class="stat-value">${sevCounts.medium || 0}</div><div class="stat-label">Medium</div></div>`;
+ const paramCount = urls.filter(u => u.has_params).length;
+ html += `<div class="stat-card clickable" onclick="scrollToSection('urls-section')"><div class="stat-value">${urls.length}</div><div class="stat-label">Crawled URLs</div></div>`;
+ html += `<div class="stat-card clickable" onclick="scrollToSection('dirs-section')"><div class="stat-value">${dirList.length}</div><div class="stat-label">Directories</div></div>`;
+ // Phase-1 advanced module stat cards (only show if any data exists)
+ if (p1Active) {
+ html += `<div class="stat-card clickable" onclick="scrollToSection('p1-ports-section')"><div class="stat-value">${p1Ports.length}</div><div class="stat-label">Open Ports</div></div>`;
+ html += `<div class="stat-card clickable stat-critical" onclick="scrollToSection('p1-secrets-section')"><div class="stat-value">${p1Secrets.length}</div><div class="stat-label">Secrets</div></div>`;
+ html += `<div class="stat-card clickable stat-medium" onclick="scrollToSection('p1-params-section')"><div class="stat-value">${p1Params.length}</div><div class="stat-label">Hidden Params</div></div>`;
+ html += `<div class="stat-card clickable" onclick="scrollToSection('p1-js-section')"><div class="stat-value">${p1JSFiles.length}</div><div class="stat-label">JS Files</div></div>`;
+ html += `<div class="stat-card clickable" onclick="scrollToSection('p1-waf-section')"><div class="stat-value">${p1HostIntel.filter(h => h.waf && h.waf !== 'none' && h.waf !== '').length}</div><div class="stat-label">WAF Detected</div></div>`;
+ }
+ html += '</div>';
+
+ // Technology & Headers (at the top, right under stats)
+ html += '<div class="section-row tech-row">';
+ html += '<div class="section half"><div class="section-header"><span class="section-title">Detected Technologies</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="tech-list">';
+ if (techDetection.length > 0) {
+ techDetection.forEach(tech => {
+ const ver = tech.version ? ' ' + tech.version : '';
+ html += `<span class="tech-badge">${tech.name}${ver}</span>`;
+ });
+ } else {
+ html += '<span class="text-muted">No technologies detected</span>';
+ }
+ html += '</div></div></div>';
+
+ html += '<div class="section half"><div class="section-header"><span class="section-title">Missing Security Headers</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><ul class="missing-headers-list">';
+ if (missingHeaders.length > 0) {
+ missingHeaders.forEach(h => { html += `<li class="missing-header-item"> ${h}</li>`; });
+ } else {
+ html += '<li class="ok-item"> All security headers present</li>';
+ }
+ html += '</ul></div></div></div>';
+
+ // All Subdomains list
+ html += renderSubdomainList(subs);
+
+ // Live Subdomains list
+ html += renderLiveList(live);
+
+ // Crawled URLs list
+ html += renderCrawledList(urls);
+
+ // Priority Targets
+ html += `<div class="section"><div class="section-header"><span class="section-title">Priority Targets <span class="section-badge">Top ${Math.min(priList.length, 15)} of ${priList.length}</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container">';
+ html += '<table class="data-table" id="priority-table"><thead><tr>';
+ html += '<th onclick="sortTable(\'priority-table\', 0)">#</th>';
+ html += '<th onclick="sortTable(\'priority-table\', 1)">Subdomain</th>';
+ html += '<th onclick="sortTable(\'priority-table\', 2)">Score</th>';
+ html += '<th onclick="sortTable(\'priority-table\', 3)">Tier</th>';
+ html += '<th>Tech Stack</th><th>Vulnerabilities</th><th>Reasons</th><th>Actions</th>';
+ html += '</tr></thead><tbody>';
+ // Only list the top 15 priority subdomains (already sorted by score desc).
+ priList.slice(0, 15).forEach(entry => {
+ const tier = tierFromScore(entry.priority_score);
+ const techStack = parseJSONField(entry.tech_stack).slice(0, 3);
+ const entryVulns = parseJSONField(entry.vulnerabilities).slice(0, 2);
+ const reasons = parseJSONField(entry.reasons).slice(0, 2);
+ html += `<tr class="tier-${tier}">`;
+ html += `<td>${entry.rank}</td>`;
+ html += `<td><a href="/target/${TARGET}/subdomain/${entry.subdomain}" class="subdomain-link">${entry.subdomain}</a></td>`;
+ html += `<td class="score-${tier}">${Math.round(entry.priority_score)}</td>`;
+ html += `<td><span class="tier-badge tier-badge-${tier}">${tier.toUpperCase()}</span></td>`;
+ html += `<td>${techStack.join(', ') || 'Unknown'}</td>`;
+ html += '<td>';
+ entryVulns.forEach(v => { html += `<span class="vuln-mini">${v}</span>`; });
+ html += '</td>';
+ html += '<td class="reasons-cell">';
+ reasons.forEach(r => {
+ const detail = typeof r === 'object' ? (r.detail || '') : r;
+ html += `<div class="reason-item">${detail}</div>`;
+ });
+ html += '</td>';
+ html += `<td><a href="/target/${TARGET}/subdomain/${entry.subdomain}" class="btn btn-small">View</a></td>`;
+ html += '</tr>';
+ });
+ html += '</tbody></table></div></div></div>';
+
+ // Vulnerabilities table
+ html += `<div id="vuln-section">`;
+ html += renderVulnTable(vulnList, vulnList.length, true);
+ html += `</div>`;
+
+ // Takeover results
+ if (takeovers.length > 0) {
+ html += `<div class="section"><div class="section-header"><span class="section-title">Subdomain Takeover <span class="section-badge">${takeovers.length} checked</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Subdomain</th><th>Vulnerable</th><th>Service</th><th>Fingerprint</th></tr></thead><tbody>';
+ takeovers.forEach(t => {
+ const cls = t.vulnerable ? 'tier-critical' : 'tier-low';
+ const fp = t.fingerprint || '';
+ html += `<tr class="${cls}">`;
+ html += `<td><a href="/target/${TARGET}/subdomain/${t.subdomain}" class="subdomain-link">${t.subdomain}</a></td>`;
+ html += `<td>${t.vulnerable ? '<span class="vuln-yes">YES</span>' : '<span class="vuln-no">No</span>'}</td>`;
+ html += `<td>${t.service || 'N/A'}</td>`;
+ html += `<td class="mono small">${fp.substring(0, 80)}</td>`;
+ html += '</tr>';
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // Discovered Directories
+ html += `<div id="dirs-section">`;
+ html += renderDirList(dirList, dirList.length, 'Discovered Directories', 'Filter directories by URL or subdomain...');
+ html += `</div>`;
+
+ // ── Phase 1 Advanced Module Results ──────────────────────────────
+ if (p1Active) {
+ html += '<div class="section"><div class="section-header"><span class="section-title">⚡ Phase 1 — Advanced Modules</span><span class="section-badge">' + p1Findings.length + ' findings</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body">';
+
+ // Open Ports (nmap)
+ if (p1Ports.length) {
+ html += `<div id="p1-ports-section"><div class="section-header"><span class="section-title">🔌 Open Ports (nmap) <span class="section-badge">${p1Ports.length}</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Subdomain</th><th>Port</th><th>Protocol</th><th>Service</th></tr></thead><tbody>';
+ p1Ports.forEach(p => {
+ html += `<tr class="tier-low"><td><a href="/target/${TARGET}/subdomain/${p.subdomain}" class="subdomain-link">${p.subdomain}</a></td><td class="mono">${p.port}</td><td>${p.protocol || '-'}</td><td>${p.service || '-'}</td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // WAF Detection (wafw00f)
+ if (p1HostIntel.length) {
+ const wafHosts = p1HostIntel.filter(h => h.waf && h.waf !== 'none' && h.waf !== '');
+ html += `<div id="p1-waf-section"><div class="section-header"><span class="section-title">🛡️ WAF Detection (wafw00f) <span class="section-badge">${wafHosts.length} protected</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Subdomain</th><th>WAF</th><th>Manufacturer</th><th>Open Ports</th><th>Secrets</th><th>JS Endpoints</th></tr></thead><tbody>';
+ p1HostIntel.forEach(h => {
+ const hasWaf = h.waf && h.waf !== 'none' && h.waf !== '';
+ html += `<tr class="${hasWaf ? 'tier-medium' : ''}"><td><a href="/target/${TARGET}/subdomain/${h.subdomain}" class="subdomain-link">${h.subdomain}</a></td><td>${hasWaf ? '<span class="vuln-yes">' + h.waf + '</span>' : '<span class="vuln-no">none</span>'}</td><td>${h.waf_manufacturer || '-'}</td><td>${h.open_port_count || 0}</td><td>${h.secret_count || 0}</td><td>${h.js_endpoint_count || 0}</td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // Secrets (trufflehog + gitleaks)
+ if (p1Secrets.length) {
+ html += `<div id="p1-secrets-section"><div class="section-header"><span class="section-title">🔑 Leaked Secrets <span class="section-badge">${p1Secrets.length}</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Subdomain</th><th>Tool</th><th>Type</th><th>Match</th><th>Source URL</th></tr></thead><tbody>';
+ p1Secrets.forEach(s => {
+ const srcUrl = s.source_url || '';
+ const isWeb = srcUrl.startsWith('http://') || srcUrl.startsWith('https://');
+ const fileCell = srcUrl ? (isWeb ? `<a href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener" class="subdomain-link secret-src" title="${escapeHtml(srcUrl)}">${escapeHtml(srcUrl)}</a>` : `<span class="mono secret-src" style="font-size:0.8em" title="${escapeHtml(srcUrl)}">${escapeHtml(srcUrl)}</span>`) : '-';
+ html += `<tr class="tier-critical"><td>${s.subdomain || '-'}</td><td>${s.tool || '-'}</td><td>${s.secret_type || '-'}</td><td class="mono" style="font-size:0.8em" title="${escapeHtml(s.raw_match || '')}">${escapeHtml((s.raw_match || '').substring(0, 60))}</td><td>${fileCell}</td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // Hidden Parameters (arjun)
+ if (p1Params.length) {
+ html += `<div id="p1-params-section"><div class="section-header"><span class="section-title">⚙️ Hidden Parameters (arjun) <span class="section-badge">${p1Params.length}</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>URL</th><th>Parameter</th></tr></thead><tbody>';
+ p1Params.forEach(p => {
+ html += `<tr class="tier-medium"><td class="mono" style="font-size:0.82em">${p.url || '-'}</td><td><span class="vuln-yes">${p.param_name || '?'}</span></td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // JS Files & Findings
+ if (p1JSFiles.length || p1JSFindings.length) {
+ const jsEndpoints = p1JSFindings.filter(f => f.type === 'endpoint');
+ const jsSecrets = p1JSFindings.filter(f => f.type === 'secret');
+ html += `<div id="p1-js-section"><div class="section-header"><span class="section-title">📜 JS Analysis <span class="section-badge">${p1JSFiles.length} files · ${jsEndpoints.length} endpoints · ${jsSecrets.length} secrets</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Subdomain</th><th>Type</th><th>Match</th></tr></thead><tbody>';
+ p1JSFindings.slice(0, 200).forEach(f => {
+ html += `<tr class="${f.type === 'secret' ? 'tier-critical' : 'tier-low'}"><td>${f.subdomain || '-'}</td><td>${f.type || '-'}</td><td class="mono" style="font-size:0.8em">${(f.value || '').substring(0, 80)}</td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ // Unified Phase-1 Findings (nmap/wafw00f/js/trufflehog/gitleaks)
+ if (p1Findings.length) {
+ html += `<div id="p1-findings-section"><div class="section-header"><span class="section-title">🔍 Phase 1 Findings <span class="section-badge">${p1Findings.length}</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body"><div class="table-container"><table class="data-table"><thead><tr><th>Severity</th><th>Subdomain</th><th>Tool</th><th>Name</th><th>Description</th></tr></thead><tbody>';
+ p1Findings.forEach(f => {
+ const sev = (f.severity || 'info').toLowerCase();
+ html += `<tr class="tier-${sev}"><td><span class="sev-badge sev-badge-${sev}">${sev}</span></td><td><a href="/target/${TARGET}/subdomain/${f.subdomain}" class="subdomain-link">${f.subdomain}</a></td><td>${f.tool || '-'}</td><td>${f.name || '-'}</td><td style="font-size:0.85em">${f.description || '-'}</td></tr>`;
+ });
+ html += '</tbody></table></div></div></div>';
+ }
+
+ html += '</div></div>';
+ }
+
+ // Scan Metadata
+ html += '<div class="section"><div class="section-header"><span class="section-title">Scan Metadata</span><span class="section-toggle">▼</span></div>';
+ html += '<div class="section-body"><div class="meta-grid">';
+ html += `<div class="meta-item"><strong>Target:</strong> ${meta.target || ''}</div>`;
+ const startTime = meta.start_time ? String(meta.start_time).substring(0, 19) : 'N/A';
+ const endTime = meta.end_time ? String(meta.end_time).substring(0, 19) : 'N/A';
+ html += `<div class="meta-item"><strong>Start:</strong> ${startTime}</div>`;
+ html += `<div class="meta-item"><strong>End:</strong> ${endTime}</div>`;
+ const dur = meta.duration_seconds ? meta.duration_seconds.toFixed(1) + 's' : 'N/A';
+ html += `<div class="meta-item"><strong>Duration:</strong> ${dur}</div>`;
+ html += `<div class="meta-item"><strong>Status:</strong> ${meta.status || ''}</div>`;
+ const phases = parseJSONField(meta.phases_completed);
+ html += `<div class="meta-item"><strong>Phases:</strong> ${phases.join(', ')}</div>`;
+ html += '</div></div></div>';
+
+ document.getElementById('target-content').innerHTML = html;
+
+ // Re-init interactive elements after rendering
+ initCollapsibleSections();
+ initVulnExpandableRows();
+ initVulnFilter();
+ initDirFilter();
+ initListFilters();
+ }
+
+ // Scroll to a section and expand it if collapsed
+ function scrollToSection(id) {
+ const el = document.getElementById(id);
+ if (!el) return;
+ const section = el.querySelector('.section') || el.querySelector('.section-row');
+ if (section && section.classList.contains('collapsed')) section.classList.remove('collapsed');
+ el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+ }
+
+ // Source badge helper for subdomain sources
+ function sourceBadges(srcStr) {
+ const srcs = (srcStr || '').split(',').map(s => s.trim()).filter(Boolean);
+ if (srcs.length === 0) return '';
+ return srcs.map(s => `<span class="source-badge src-${s}">${s}</span>`).join(' ');
+ }
+
+ // HTTP status → pill class
+ function statusPillClass(code) {
+ if (!code) return 'sother';
+ if (code === 200) return 's200';
+ if ([301,302,303,307,308].includes(code)) return 's301';
+ if ([401,403,405].includes(code)) return 's403';
+ if (code === 404) return 's404';
+ if (code >= 500) return 's500';
+ return 'sother';
+ }
+
+ function renderSubdomainList(subs) {
+ const total = subs.length;
+ let html = `<div id="subdomains-section"><div class="section"><div class="section-header"><span class="section-title">All Subdomains <span class="section-badge">${total} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (total > 0) {
+ html += `<div class="list-toolbar"><input type="text" id="sub-search" class="filter-input" placeholder="Filter subdomains by name or source..." /><span class="list-count" id="sub-count">${total} shown</span></div>`;
+ html += '<div class="dir-url-list" id="sub-list">';
+ subs.forEach(s => {
+ const name = s.subdomain || '';
+ html += `<div class="result-row sub-row" data-sub-search="${escapeAttr((name + ' ' + (s.source || '')).toLowerCase())}">`;
+ html += `<span class="row-main"><a href="/target/${TARGET}/subdomain/${name}" class="subdomain-link">${escapeHtml(name)}</a></span>`;
+ html += '</div>';
+ });
+ html += '</div>';
+ } else {
+ html += '<p class="text-muted">No subdomains discovered.</p>';
+ }
+ html += '</div></div></div>';
+ return html;
+ }
+
+ function renderLiveList(live) {
+ const total = live.length;
+ let html = `<div id="live-section"><div class="section"><div class="section-header"><span class="section-title">Live Subdomains <span class="section-badge">${total} live</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (total > 0) {
+ html += `<div class="list-toolbar"><input type="text" id="live-search" class="filter-input" placeholder="Filter live hosts by subdomain, title, webserver..." /><span class="list-count" id="live-count">${total} shown</span></div>`;
+ html += '<div class="dir-url-list" id="live-list">';
+ live.forEach(h => {
+ const sub = h.subdomain || '';
+ const url = h.url || (sub ? 'https://' + sub : '');
+ const sc = h.status_code || 0;
+ const title = h.title || '';
+ const ws = h.webserver || '';
+ const searchTxt = escapeAttr((sub + ' ' + title + ' ' + ws + ' ' + sc).toLowerCase());
+ html += `<div class="result-row live-row" data-live-search="${searchTxt}">`;
+ html += `<span class="status-pill ${statusPillClass(sc)}">${sc || '—'}</span>`;
+ html += `<span class="row-main"><a href="${url || '#'}" target="_blank" class="subdomain-link">${escapeHtml(sub)}</a>`;
+ if (title) html += ` <span class="row-title">${escapeHtml(title)}</span>`;
+ html += '</span>';
+ html += '<span class="row-meta">';
+ if (ws) html += `<span class="source-badge">${escapeHtml(ws)}</span>`;
+ html += `<a href="/target/${TARGET}/subdomain/${sub}" class="btn btn-small btn-secondary">View</a>`;
+ html += '</span>';
+ html += '</div>';
+ });
+ html += '</div>';
+ } else {
+ html += '<p class="text-muted">No live subdomains found.</p>';
+ }
+ html += '</div></div></div>';
+ return html;
+ }
+
+ function renderCrawledList(urls) {
+ const total = urls.length;
+ const paramCount = urls.filter(u => u.has_params).length;
+ let html = `<div id="urls-section"><div class="section"><div class="section-header"><span class="section-title">Crawled URLs <span class="section-badge">${total} found · ${paramCount} with params</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (total > 0) {
+ html += `<div class="list-toolbar"><input type="text" id="url-search" class="filter-input" placeholder="Filter crawled URLs by host or path..." /><div class="tools-filter-chip active" data-url-filter="all">All</div><div class="tools-filter-chip" data-url-filter="params">With Params</div><span class="list-count" id="url-count">${total} shown</span></div>`;
+ html += '<div class="dir-url-list" id="url-list">';
+ urls.forEach(u => {
+ const u_url = u.url || '';
+ const hasP = u.has_params;
+ const pcount = u.param_count || 0;
+ html += `<div class="result-row url-row" data-url-search="${escapeAttr(u_url.toLowerCase())}" data-url-has-params="${hasP}">`;
+ html += `<span class="row-main"><a href="${u_url || '#'}" target="_blank" class="subdomain-link">${escapeHtml(u_url)}</a></span>`;
+ html += '<span class="row-meta">';
+ if (hasP) html += `<span class="row-param-flag">${pcount} param${pcount !== 1 ? 's' : ''}</span>`;
+ if (u.source) html += `<span class="source-badge src-${escapeAttr(u.source)}">${escapeHtml(u.source)}</span>`;
+ html += '</span>';
+ html += '</div>';
+ });
+ html += '</div>';
+ } else {
+ html += '<p class="text-muted">No URLs crawled.</p>';
+ }
+ html += '</div></div></div>';
+ return html;
+ }
+
+ // Generic live filtering for the three new list sections
+ function initListFilters() {
+ // Subdomains
+ const subSearch = document.getElementById('sub-search');
+ if (subSearch) {
+ subSearch.addEventListener('input', () => filterList('sub-search', '.sub-row', 'data-sub-search', 'sub-count'));
+ }
+ // Live hosts
+ const liveSearch = document.getElementById('live-search');
+ if (liveSearch) {
+ liveSearch.addEventListener('input', () => filterList('live-search', '.live-row', 'data-live-search', 'live-count'));
+ }
+ // Crawled URLs (search + param chip)
+ const urlSearch = document.getElementById('url-search');
+ if (urlSearch) {
+ urlSearch.addEventListener('input', applyUrlFilter);
+ }
+ document.querySelectorAll('[data-url-filter]').forEach(chip => {
+ chip.addEventListener('click', function() {
+ document.querySelectorAll('[data-url-filter]').forEach(c => c.classList.remove('active'));
+ this.classList.add('active');
+ applyUrlFilter();
+ });
+ });
+ }
+
+ function filterList(searchId, rowSel, dataAttr, countId) {
+ const q = (document.getElementById(searchId)?.value || '').toLowerCase();
+ const rows = document.querySelectorAll(rowSel);
+ let shown = 0;
+ rows.forEach(r => {
+ const text = r.getAttribute(dataAttr) || '';
+ const match = !q || text.includes(q);
+ r.style.display = match ? '' : 'none';
+ if (match) shown++;
+ });
+ const countEl = document.getElementById(countId);
+ if (countEl) countEl.textContent = `${shown} shown`;
+ }
+
+ function applyUrlFilter() {
+ const q = (document.getElementById('url-search')?.value || '').toLowerCase();
+ const activeChip = document.querySelector('[data-url-filter].active');
+ const filter = activeChip?.dataset.urlFilter || 'all';
+ const rows = document.querySelectorAll('.url-row');
+ let shown = 0;
+ rows.forEach(r => {
+ const text = r.dataset.urlSearch || '';
+ const hasP = r.dataset.urlHasParams === 'true';
+ const matchText = !q || text.includes(q);
+ const matchFilter = filter === 'all' || (filter === 'params' && hasP);
+ const ok = matchText && matchFilter;
+ r.style.display = ok ? '' : 'none';
+ if (ok) shown++;
+ });
+ const countEl = document.getElementById('url-count');
+ if (countEl) countEl.textContent = `${shown} shown`;
+ }
+
+ function renderVulnTable(vulns, total, showSubdomain) {
+ let html = `<div class="section"><div class="section-header"><span class="section-title">Vulnerabilities <span class="section-badge">${total} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ if (vulns && vulns.length > 0) {
+ html += '<div class="filter-bar">';
+ const searchPlaceholder = showSubdomain ? 'Search by name, subdomain, template, CVE...' : 'Search by name, template, CVE...';
+ html += `<input type="text" id="vuln-search" class="filter-input" placeholder="${searchPlaceholder}" />`;
+ html += '<div class="filter-chip critical" data-sev="critical">Critical</div>';
+ html += '<div class="filter-chip high" data-sev="high">High</div>';
+ html += '<div class="filter-chip medium" data-sev="medium">Medium</div>';
+ html += '<div class="filter-chip low" data-sev="low">Low</div>';
+ html += '<div class="filter-chip info" data-sev="info">Info</div>';
+ html += '</div>';
+
+ html += '<div class="table-container"><table class="data-table" id="vuln-table"><thead><tr>';
+ html += '<th onclick="sortTable(\'vuln-table\', 0)">Severity</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 1)">Name</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 2)">Template ID</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 3)">Type</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 4)">Endpoint</th>';
+ html += '<th onclick="sortTable(\'vuln-table\', 5)">CVE</th>';
+ html += '<th></th>';
+ html += '</tr></thead><tbody>';
+
+ vulns.forEach((v, idx) => {
+ const sev = (v.severity || 'info').toLowerCase();
+ const tmplId = v.template_id || 'N/A';
+ const cveIds = parseJSONField(v.cve_ids);
+ const cveStr = cveIds.join(', ');
+ const refs = parseJSONField(v.reference);
+ const extracted = parseJSONField(v.extracted_results);
+ const desc = v.description || '';
+
+ html += `<tr class="vuln-row sev-${sev}"
+ data-vuln-id="${idx + 1}"
+ data-vuln-name="${escapeAttr(v.name || '')}"
+ data-vuln-severity="${sev}"
+ data-vuln-template="${escapeAttr(tmplId)}"
+ data-vuln-type="${escapeAttr(v.type || '')}"
+ data-vuln-url="${escapeAttr(v.url || '')}"
+ data-vuln-subdomain="${escapeAttr(v.subdomain || '')}"
+ data-vuln-cve="${escapeAttr(cveStr)}"
+ data-vuln-desc="${escapeAttr(desc)}"
+ data-vuln-matcher="${escapeAttr(v.matcher_name || '')}"
+ data-vuln-extracted="${escapeAttr(extracted.join('; '))}"
+ data-vuln-refs="${escapeAttr(refs.join(', '))}"
+ onclick="showVulnModal(${idx + 1})">`;
+ html += `<td><span class="sev-badge sev-badge-${sev}">${sev.toUpperCase()}</span></td>`;
+ html += `<td>${escapeHtml(v.name || '')}</td>`;
+ html += `<td class="mono small">${tmplId}</td>`;
+ html += `<td>${v.type || 'N/A'}</td>`;
+ const urlDisplay = v.url ? (v.url.length > 60 ? v.url.substring(0, 60) + '...' : v.url) : 'N/A';
+ html += `<td class="mono small"><a href="${v.url || '#'}" target="_blank" class="subdomain-link" onclick="event.stopPropagation()">${urlDisplay}</a></td>`;
+ html += `<td>${cveStr || 'N/A'}</td>`;
+ html += '<td><span class="expand-icon">▶</span></td>';
+ html += '</tr>';
+
+ // Expandable detail row
+ html += `<tr class="vuln-expand-row" data-vuln-id="${idx + 1}"><td colspan="7"><div class="vuln-detail-panel">`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Severity</span><span class="vuln-detail-value" style="color: var(--${sev}); font-weight: 700;">${sev.toUpperCase()}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Template ID</span><span class="vuln-detail-value mono">${tmplId}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Type</span><span class="vuln-detail-value">${v.type || 'N/A'}</span></div>`;
+ if (showSubdomain) {
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Subdomain</span><span class="vuln-detail-value"><a href="/target/${TARGET}/subdomain/${v.subdomain || ''}" class="subdomain-link">${v.subdomain || ''}</a></span></div>`;
+ }
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Endpoint / URL</span><span class="vuln-detail-value url">${v.url ? `<a href="${v.url}" target="_blank">${v.url}</a>` : 'N/A'}</span></div>`;
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">CVE IDs</span><span class="vuln-detail-value" style="color: var(--critical); font-weight: 600;">${cveStr || 'N/A'}</span></div>`;
+ if (v.matcher_name) {
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Matcher</span><span class="vuln-detail-value mono">${v.matcher_name}</span></div>`;
+ }
+ if (extracted.length > 0) {
+ html += `<div class="vuln-detail-item"><span class="vuln-detail-label">Extracted Results</span><span class="vuln-detail-value mono">${extracted.join('; ')}</span></div>`;
+ }
+ if (desc) {
+ html += `<div class="vuln-detail-description">${desc}</div>`;
+ }
+ if (refs.length > 0) {
+ html += '<div class="vuln-detail-refs">';
+ refs.slice(0, 5).forEach(ref => {
+ const display = ref.length > 70 ? ref.substring(0, 70) + '...' : ref;
+ html += `<a href="${ref}" target="_blank">${display}</a>`;
+ });
+ html += '</div>';
+ }
+ html += '</div></td></tr>';
+ });
+
+ html += '</tbody></table></div>';
+ html += '<div id="vuln-pagination" class="pagination-controls" style="display: none;">';
+ html += '<div class="pagination-info"><span id="vuln-page-info"></span></div>';
+ html += '<div class="pagination-actions">';
+ html += '<select id="vuln-page-size" onchange="changeVulnPageSize(this.value)"><option value="25">25 / page</option><option value="50" selected>50 / page</option><option value="100">100 / page</option></select>';
+ html += '<button class="btn btn-small btn-secondary" id="vuln-prev-page" onclick="changeVulnPage(-1)">← Prev</button>';
+ html += '<button class="btn btn-small btn-secondary" id="vuln-next-page" onclick="changeVulnPage(1)">Next →</button>';
+ html += '</div></div>';
+ } else {
+ html += `<div class="alert-ok"> No vulnerabilities found${showSubdomain ? '' : ' for this subdomain'}</div>`;
+ }
+ html += '</div></div>';
+ return html;
+ }
+
+ function renderDirList(directories, total, title, placeholder) {
+ if (!directories || directories.length === 0) return '';
+ let html = `<div class="section"><div class="section-header"><span class="section-title">${title} <span class="section-badge">${total} found</span></span><span class="section-toggle">▼</span></div>`;
+ html += '<div class="section-body">';
+ html += `<div class="filter-bar"><input type="text" id="dir-search" class="filter-input" placeholder="${placeholder}" /></div>`;
+ html += '<div class="dir-url-list">';
+ directories.forEach(d => {
+ const sc = d.status_code || 0;
+ const url = d.url || d.path || '';
+ let pillClass = 'sother';
+ if (sc === 200) pillClass = 's200';
+ else if ([301, 302, 307].includes(sc)) pillClass = 's301';
+ else if ([401, 403, 405].includes(sc)) pillClass = 's403';
+ html += `<div class="dir-url-item">`;
+ html += `<span class="status-pill ${pillClass}">${sc}</span>`;
+ html += `<a href="${url}" target="_blank" class="dir-url">${url}</a>`;
+ html += `<span class="dir-size">${d.content_length || 'N/A'} bytes</span>`;
+ html += '</div>';
+ });
+ html += '</div></div></div>';
+ return html;
+ }
+
+ function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+ function escapeAttr(s) { return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+ // Start loading immediately
+ loadTargetDetail();
+
+ // Auto-refresh results every 30 seconds
+ refreshInterval = setInterval(loadTargetDetail, 30000);
+ </script>
+</body>
+</html>

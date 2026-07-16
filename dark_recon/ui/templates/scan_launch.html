@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - New Scan</title>
+ <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="empty-state">
+ <div class="empty-icon"><span class="spinner" style="width:32px;height:32px"></span></div>
+ <h2>Opening scan panel...</h2>
+ </div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ // The New Scan form now lives in a slide-in drawer on the dashboard.
+ // Redirect there and auto-open the drawer.
+ window.location.replace('/?new_scan=1');
+ </script>
+</body>
+</html>

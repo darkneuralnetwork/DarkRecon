@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Tools</title>
+ <link rel="stylesheet" href="/static/style.css">
+ <link rel="stylesheet" href="/static/css/tools.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <a href="/" class="back-link">← Dashboard</a>
+ <h1>Tools</h1>
+ </div>
+ <div class="page-header-actions">
+ <button onclick="refreshAllTools()" class="btn btn-secondary" id="refresh-all-btn"> Refresh All</button>
+ </div>
+ </div>
+
+ <div class="stats-grid" id="tools-summary">
+ <div class="stat-card">
+ <div class="stat-value" id="stat-total">0</div>
+ <div class="stat-label">Total Tools</div>
+ </div>
+ <div class="stat-card stat-low">
+ <div class="stat-value" id="stat-installed">0</div>
+ <div class="stat-label">Installed</div>
+ </div>
+ <div class="stat-card stat-critical">
+ <div class="stat-value" id="stat-missing">0</div>
+ <div class="stat-label">Missing</div>
+ </div>
+ <div class="stat-card">
+ <div class="stat-value" id="stat-enabled">0</div>
+ <div class="stat-label">Enabled</div>
+ </div>
+ </div>
+
+ <div class="tools-toolbar">
+ <input type="text" class="tools-search" id="tools-search" placeholder=" Search tools by name or description..." />
+ <div class="tools-filter-chips">
+ <div class="tools-filter-chip active" data-filter="all">All</div>
+ <div class="tools-filter-chip" data-filter="installed"> Installed</div>
+ <div class="tools-filter-chip" data-filter="missing"> Missing</div>
+ <div class="tools-filter-chip" data-filter="custom"> Custom</div>
+ </div>
+ </div>
+
+ <div class="tools-grid" id="tools-grid">
+ <p class="text-muted">Loading tools...</p>
+ </div>
+
+ <div class="tool-info-section" style="margin-top: 24px;">
+ <div class="section-header" style="padding: 14px 20px;">
+ <span class="section-title"> Tool Information</span>
+ <span class="section-toggle">▼</span>
+ </div>
+ <div class="section-body" style="padding: 0 20px 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+ <div class="tool-info-list" id="tool-info-list">
+ <div class="tool-info-item text-muted">Loading tool details...</div>
+ </div>
+ <div class="alert-ok" style="margin-top: 16px;">
+ <strong>Go tools</strong> require Go to be installed (<code>sudo apt install golang</code>).
+ After installation, ensure <code>~/go/bin</code> is in your PATH.
+ <strong>pip tools</strong> require Python/pip. <strong>apt tools</strong> require sudo.
+ Custom tools can be added via <code>tools_config.yaml</code>.
+ </div>
+ </div>
+ </div>
+
+ <div class="tool-detail-overlay" id="tool-detail-overlay" onclick="if(event.target===this)closeToolDetail()">
+ <div class="tool-detail-panel">
+ <div class="tool-detail-header">
+ <h3 id="tool-detail-title"> Tool</h3>
+ <button class="modal-close" onclick="closeToolDetail()">&times;</button>
+ </div>
+ <div class="tool-detail-body" id="tool-detail-body"></div>
+ </div>
+ </div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script src="/static/js/tools.js"></script>
+ <script>
+ async function loadTools() {
+ try {
+ const resp = await fetch('/api/tools');
+ const data = await resp.json();
+ const tools = data.tools || {};
+ const grid = document.getElementById('tools-grid');
+
+ let installedCount = 0, missingCount = 0, enabledCount = 0;
+ let html = '';
+
+ for (const [name, info] of Object.entries(tools)) {
+ if (info.installed) installedCount++; else missingCount++;
+ if (info.enabled) enabledCount++;
+
+ const cardClass = (info.installed ? 'installed' : 'missing') + (info.enabled ? '' : ' disabled');
+ const searchText = (name + ' ' + (info.description || '')).toLowerCase();
+
+ html += `<div class="tool-card ${cardClass}"
+ data-tool-name="${name}"
+ data-tool-installed="${info.installed}"
+ data-tool-custom="${info.is_custom || false}"
+ data-tool-search="${searchText}">
+
+ <div class="tool-card-loading-overlay hidden" id="loading-${name}">
+ <div class="loading-spinner"></div>
+ </div>
+
+ <div class="tool-card-header">
+ <span class="tool-card-name">${info.installed ? '' : ''} ${name}</span>
+ <label class="toggle-switch" title="${info.enabled ? 'Disable' : 'Enable'} ${name}">
+ <input type="checkbox" ${info.enabled ? 'checked' : ''}
+ onchange="toggleTool('${name}', this.checked)"
+ id="toggle-${name}" />
+ <span class="toggle-slider"></span>
+ </label>
+ </div>
+
+ <div class="tool-card-desc">${info.description || 'No description available'}</div>
+
+ <div class="tool-card-badges">
+ <span class="tool-method-badge ${info.method}">${info.method}</span>
+ ${info.phase ? `<span class="tool-phase-badge">${info.phase}</span>` : ''}
+ ${info.is_custom ? `<span class="tool-custom-badge"> Custom</span>` : ''}
+ </div>
+
+ <div class="tool-card-meta">
+ ${info.installed ? `<div class="tool-meta-item"><strong>Version:</strong> <span class="mono" id="version-${name}">${info.version || 'unknown'}</span></div>` : ''}
+ <div class="tool-meta-item">
+ <strong>Status:</strong>
+ ${info.installed ? '<span class="status-badge status-completed">Installed</span>' : '<span class="status-badge status-failed">Missing</span>'}
+ </div>
+ </div>
+
+ <div class="tool-card-actions">
+ ${!info.installed
+ ? `<button class="btn btn-small btn-primary" onclick="installTool('${name}')" id="install-btn-${name}"> Install</button>`
+ : `<button class="btn btn-small btn-danger" onclick="uninstallTool('${name}')" id="uninstall-btn-${name}"> Uninstall</button>`}
+ <button class="btn btn-small btn-secondary" onclick="checkTool('${name}')" id="check-btn-${name}"> Check</button>
+ <button class="btn btn-small btn-secondary" onclick="showToolDetail('${name}')"> Details</button>
+ </div>
+ </div>`;
+ }
+
+ grid.innerHTML = html;
+ document.getElementById('stat-total').textContent = Object.keys(tools).length;
+ document.getElementById('stat-installed').textContent = installedCount;
+ document.getElementById('stat-missing').textContent = missingCount;
+ document.getElementById('stat-enabled').textContent = enabledCount;
+
+ // Render the dynamic Tool Information list from the same backend data,
+ // so any tool added to BuiltinTools appears here automatically with its
+ // details (description, method, install command, status).
+ renderToolInfoList(tools);
+
+ // Re-apply active search/filter to the freshly-rendered cards.
+ if (typeof applyToolsFilter === 'function') applyToolsFilter();
+ } catch (e) {
+ grid.innerHTML = '<p class="text-muted">Failed to load tools</p>';
+ const infoList = document.getElementById('tool-info-list');
+ if (infoList) infoList.innerHTML = '<div class="tool-info-item text-muted">Failed to load tool details</div>';
+ }
+ }
+
+ // renderToolInfoList builds the bottom "Tool Information" summary from the
+ // live /api/tools response. Sorted alphabetically; each entry shows the
+ // tool name, description, method badge, and a status pill. This replaces
+ // the old hardcoded list that went stale whenever a tool was added.
+ function renderToolInfoList(tools) {
+ const list = document.getElementById('tool-info-list');
+ if (!list) return;
+ const entries = Object.entries(tools).sort((a, b) => a[0].localeCompare(b[0]));
+ if (!entries.length) {
+ list.innerHTML = '<div class="tool-info-item text-muted">No tools registered.</div>';
+ return;
+ }
+ list.innerHTML = entries.map(([name, info]) => {
+ const status = info.installed
+ ? '<span class="status-badge status-completed">installed</span>'
+ : '<span class="status-badge status-failed">missing</span>';
+ const method = info.method ? `<span class="tool-method-badge ${info.method}">${info.method}</span>` : '';
+ const desc = info.description || 'No description available';
+ const cmd = info.install_cmd ? `<code class="tool-info-cmd">${escapeHtml(info.install_cmd)}</code>` : '';
+ return `<div class="tool-info-item">
+ <div class="tool-info-head">
+ <span class="tool-info-name">→ <strong>${escapeHtml(name)}</strong></span>
+ <span class="tool-info-tags">${method} ${status}</span>
+ </div>
+ <div class="tool-info-desc">${escapeHtml(desc)}</div>
+ ${cmd ? `<div class="tool-info-cmd-wrap">${cmd}</div>` : ''}
+ </div>`;
+ }).join('');
+ }
+
+ function escapeHtml(s) {
+ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ }
+
+ loadTools();
+ </script>
+</body>
+</html>

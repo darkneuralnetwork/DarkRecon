@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Dashboard</title>
+ <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <h1>Dashboard</h1>
+ <span class="dash-subtitle">Attack Surface Intelligence Overview</span>
+ </div>
+ <div class="page-header-actions">
+ <button onclick="openScanDrawer()" class="btn btn-primary">+ New Scan</button>
+ </div>
+ </div>
+
+ <!-- Offensive operations banner -->
+ <div class="ops-banner">
+ <div class="ops-banner-glow"></div>
+ <div class="ops-banner-flag">
+ <svg class="ops-flag-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+ <circle cx="12" cy="12" r="10"/>
+ <line x1="12" y1="2" x2="12" y2="22"/>
+ <line x1="2" y1="12" x2="22" y2="12"/>
+ <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+ </svg>
+ <div class="ops-banner-text">
+ <span class="ops-banner-title">OFFENSIVE OPERATIONS</span>
+ <span class="ops-banner-sub">Target Intelligence &amp; Attack Surface Reconnaissance</span>
+ </div>
+ </div>
+ <div class="ops-banner-stats" id="ops-banner-stats"></div>
+ </div>
+
+ <!-- ── Top stat tiles row ── -->
+ <div class="dash-stat-row" id="dash-stat-row">
+ <div class="dash-tile" data-sev="target">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num" id="tile-targets">0</span><span class="dash-tile-lbl">Targets</span></div>
+ </div>
+ <div class="dash-tile" data-sev="vuln">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num" id="tile-vulns">0</span><span class="dash-tile-lbl">Vulnerabilities</span></div>
+ </div>
+ <div class="dash-tile" data-sev="critical">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num critical" id="tile-critical">0</span><span class="dash-tile-lbl">Critical</span></div>
+ </div>
+ <div class="dash-tile" data-sev="high">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num high" id="tile-high">0</span><span class="dash-tile-lbl">High</span></div>
+ </div>
+ <div class="dash-tile" data-sev="sub">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num" id="tile-subs">0</span><span class="dash-tile-lbl">Subdomains</span></div>
+ </div>
+ <div class="dash-tile" data-sev="live">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num" id="tile-live">0</span><span class="dash-tile-lbl">Live Hosts</span></div>
+ </div>
+ <div class="dash-tile" data-sev="critical">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num critical" id="tile-secrets">0</span><span class="dash-tile-lbl">Leaked Secrets</span></div>
+ </div>
+ <div class="dash-tile" data-sev="live">
+ <div class="dash-tile-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1"/><line x1="7" y1="7" x2="7.01" y2="7"/><rect x="3" y="14" width="18" height="6" rx="1"/><line x1="7" y1="17" x2="7.01" y2="17"/></svg></div>
+ <div class="dash-tile-body"><span class="dash-tile-num" id="tile-ports">0</span><span class="dash-tile-lbl">Open Ports</span></div>
+ </div>
+ </div>
+
+ <!-- ── Main dashboard grid: side target list | main panels ── -->
+ <div class="dash-grid">
+
+ <!-- LEFT: Scanned Targets side box -->
+ <aside class="dash-side">
+ <div class="dash-side-head">
+ <span class="dash-side-title">
+ <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+ Scanned Targets
+ </span>
+ <span class="dash-side-count" id="side-target-count">0</span>
+ </div>
+ <div class="dash-side-search">
+ <input type="text" id="target-search" placeholder="Filter targets…" autocomplete="off">
+ </div>
+ <div class="dash-side-list" id="dash-target-list">
+ <div class="dash-side-empty">Loading targets…</div>
+ </div>
+ </aside>
+
+ <!-- RIGHT: main panels -->
+ <section class="dash-main">
+
+ <!-- TOP BOX: Vulnerability Distribution (percentage, graphical) -->
+ <div class="vuln-pie-card">
+ <div class="vuln-pie-head">
+ <span class="vuln-pie-title">Vulnerability Distribution</span>
+ <span class="vuln-pie-sub">Severity share across all scanned targets</span>
+ </div>
+ <div class="vuln-pie-body" id="vuln-pie-body">
+ <div class="vuln-pie-wrap">
+ <div class="vuln-pie" id="vuln-pie">
+ <div class="vuln-pie-hole">
+ <span class="vuln-pie-num" id="vuln-pie-num">0</span>
+ <span class="vuln-pie-num-lbl">Total Vulns</span>
+ </div>
+ </div>
+ </div>
+ <div class="vuln-pie-legend" id="vuln-pie-legend"></div>
+ </div>
+ </div>
+
+ <!-- Severity summary table + percentage bars -->
+ <div class="dash-card">
+ <div class="dash-card-head">
+ <span class="dash-card-title">Severity Summary</span>
+ <span class="dash-card-sub">Critical · High · Medium · Low · Info</span>
+ </div>
+ <div class="table-wrap">
+ <table class="data-table" id="sev-summary-table">
+ <thead>
+ <tr>
+ <th>Severity</th>
+ <th>Count</th>
+ <th>Percentage</th>
+ <th style="width:38%">Distribution</th>
+ </tr>
+ </thead>
+ <tbody id="sev-summary-tbody">
+ <tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px">No data yet</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Latest CVE found -->
+ <div class="dash-card">
+ <div class="dash-card-head">
+ <span class="dash-card-title">Latest CVE Found</span>
+ <span class="dash-card-sub">Most recent CVE-tagged findings across all targets</span>
+ </div>
+ <div class="table-wrap">
+ <table class="data-table" id="cve-table">
+ <thead>
+ <tr>
+ <th>CVE ID</th>
+ <th>Target</th>
+ <th>Severity</th>
+ <th>Vulnerability</th>
+ <th>Endpoint</th>
+ </tr>
+ </thead>
+ <tbody id="cve-tbody">
+ <tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px">No CVEs discovered yet</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Sensitive Secrets Summary -->
+ <div class="dash-card">
+ <div class="dash-card-head">
+ <span class="dash-card-title">Sensitive Secrets Summary</span>
+ <span class="dash-card-sub" id="secrets-sub">Leaked credentials / tokens across all targets</span>
+ </div>
+ <div id="secrets-bytool" style="display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 12px"></div>
+ <div class="table-wrap">
+ <table class="data-table" id="secrets-table">
+ <thead>
+ <tr>
+ <th>Target</th>
+ <th>Subdomain</th>
+ <th>Tool</th>
+ <th>Type</th>
+ <th>Source URL</th>
+ <th>Match</th>
+ </tr>
+ </thead>
+ <tbody id="secrets-tbody">
+ <tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px">No secrets discovered yet</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Open Ports Summary -->
+ <div class="dash-card">
+ <div class="dash-card-head">
+ <span class="dash-card-title">Open Ports</span>
+ <span class="dash-card-sub" id="ports-sub">Discovered open ports across all targets</span>
+ </div>
+ <div id="ports-graph" class="ports-graph"></div>
+ <div class="table-wrap">
+ <table class="data-table" id="ports-table">
+ <thead>
+ <tr>
+ <th>Target</th>
+ <th>Subdomain</th>
+ <th>Port</th>
+ <th>Protocol</th>
+ <th>Service</th>
+ </tr>
+ </thead>
+ <tbody id="ports-tbody">
+ <tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px">No open ports discovered yet</td></tr>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ </section>
+ </div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ // ── Severity palette + order (kept in sync with style.css tokens) ──
+ const SEV_COLORS = { critical:'#f43f5e', high:'#fb923c', medium:'#facc15', low:'#34d399', info:'#38bdf8' };
+ const SEV_ORDER  = ['critical','high','medium','low','info'];
+
+ let DASH = null; // last summary payload (for filtering)
+
+ async function loadDashboard() {
+ try {
+ const resp = await fetch('/api/dashboard/summary');
+ if (!resp.ok) throw new Error('http ' + resp.status);
+ const data = await resp.json();
+ DASH = data;
+ renderDashboard(data);
+ } catch (e) {
+ document.getElementById('dash-target-list').innerHTML = '<div class="dash-side-empty">Failed to load dashboard</div>';
+ }
+ }
+
+ function renderDashboard(data) {
+ const totals = data.totals || {};
+ const sev = totals.by_severity || {};
+ const pct = data.percentages || {};
+ const totalVulns = totals.vulnerabilities || 0;
+
+ // ── Stat tiles ──
+ setText('tile-targets', totals.targets || 0);
+ setText('tile-vulns',  totalVulns);
+ setText('tile-critical', sev.critical || 0);
+ setText('tile-high',     sev.high || 0);
+ setText('tile-subs',   totals.subdomains || 0);
+ setText('tile-live',   totals.live_hosts || 0);
+ setText('tile-secrets', totals.secrets || 0);
+ setText('tile-ports', totals.open_ports || 0);
+
+ // ── Ops banner stats ──
+ const statsEl = document.getElementById('ops-banner-stats');
+ if (statsEl) {
+ statsEl.innerHTML =
+ `<span class="ops-stat"><span class="ops-stat-num">${totals.targets || 0}</span><span class="ops-stat-lbl">Targets</span></span>` +
+ `<span class="ops-stat"><span class="ops-stat-num critical">${sev.critical || 0}</span><span class="ops-stat-lbl">Critical</span></span>` +
+ `<span class="ops-stat"><span class="ops-stat-num" style="color:var(--high)">${sev.high || 0}</span><span class="ops-stat-lbl">High</span></span>` +
+ `<span class="ops-stat"><span class="ops-stat-num">${totalVulns}</span><span class="ops-stat-lbl">Total Vulns</span></span>` +
+ `<span class="ops-stat"><span class="ops-stat-num critical">${totals.secrets || 0}</span><span class="ops-stat-lbl">Secrets</span></span>` +
+ `<span class="ops-stat"><span class="ops-stat-num" style="color:var(--info)">${totals.open_ports || 0}</span><span class="ops-stat-lbl">Open Ports</span></span>`;
+ }
+
+ // ── Donut chart (conic-gradient) + legend ──
+ renderDonut(sev, pct, totalVulns);
+
+ // ── Severity summary table ──
+ renderSevTable(sev, pct, totalVulns);
+
+ // ── Latest CVE table ──
+ renderCVETable(data.latest_cves || []);
+
+ // ── Sensitive secrets summary ──
+ renderSecretsCard(data.latest_secrets || [], data.secrets_by_tool || {}, totals.secrets || 0);
+
+ // ── Open ports summary (frequency graph + table) ──
+ renderPortsCard(data.latest_ports || [], data.ports_by_number || {}, totals.open_ports || 0);
+
+ // ── Side target list ──
+ renderTargetList(data.targets || []);
+ }
+
+ // Conic-gradient donut. Cumulative percentages build the ring; a centre hole
+ // shows the total. When there are no vulns we render a neutral grey ring.
+ function renderDonut(sev, pct, total) {
+ const pie = document.getElementById('vuln-pie');
+ const num = document.getElementById('vuln-pie-num');
+ const legend = document.getElementById('vuln-pie-legend');
+ num.textContent = total;
+
+ if (total === 0) {
+ pie.style.background = 'conic-gradient(rgba(120,140,170,0.18) 0% 100%)';
+ legend.innerHTML = '<div class="vuln-pie-empty">No vulnerabilities recorded yet. Run a scan to populate the distribution.</div>';
+ return;
+ }
+
+ let stops = [];
+ let acc = 0;
+ SEV_ORDER.forEach(s => {
+ const c = sev[s] || 0;
+ if (c === 0) return;
+ const start = acc;
+ acc += pct[s] || 0;
+ stops.push(`${SEV_COLORS[s]} ${start.toFixed(2)}% ${acc.toFixed(2)}%`);
+ });
+ // Cap the final stop at 100% so float rounding never leaves a gap.
+ if (stops.length) {
+ const last = stops[stops.length - 1].replace(/[\d.]+%$/, '100%');
+ stops[stops.length - 1] = last;
+ }
+ pie.style.background = `conic-gradient(${stops.join(', ')})`;
+
+ let lh = '';
+ SEV_ORDER.forEach(s => {
+ const c = sev[s] || 0;
+ const p = pct[s] || 0;
+ lh += `<div class="vuln-pie-row">
+ <span class="vuln-pie-dot" style="background:${SEV_COLORS[s]};color:${SEV_COLORS[s]}"></span>
+ <span class="vuln-pie-name">${s}</span>
+ <span class="vuln-pie-count">${c}</span>
+ <span class="vuln-pie-pct">${p.toFixed(1)}%</span>
+ </div>`;
+ });
+ legend.innerHTML = lh;
+ }
+
+ function renderSevTable(sev, pct, total) {
+ const tbody = document.getElementById('sev-summary-tbody');
+ if (total === 0) {
+ tbody.innerHTML = `<tr><td colspan="4" class="text-muted" style="text-align:center;padding:24px">No vulnerabilities discovered yet</td></tr>`;
+ return;
+ }
+ let html = '';
+ SEV_ORDER.forEach(s => {
+ const c = sev[s] || 0;
+ const p = pct[s] || 0;
+ const barW = Math.max(p, c > 0 ? 4 : 0); // give tiny slices a visible sliver
+ html += `<tr>
+ <td><span class="sev-dot ${s}" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${SEV_COLORS[s]};box-shadow:0 0 8px ${SEV_COLORS[s]}"></span><span class="sev-${s}" style="text-transform:capitalize;font-weight:700">${s}</span></td>
+ <td style="font-weight:700;color:var(--text-primary)">${c}</td>
+ <td>${p.toFixed(1)}%</td>
+ <td><div class="sev-dist-bar"><div class="sev-dist-fill ${s}" style="width:${barW}%"></div></div></td>
+ </tr>`;
+ });
+ tbody.innerHTML = html;
+ }
+
+ function renderCVETable(cves) {
+ const tbody = document.getElementById('cve-tbody');
+ if (!cves || cves.length === 0) {
+ tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px">No CVEs discovered yet</td></tr>`;
+ return;
+ }
+ let html = '';
+ cves.forEach(c => {
+ const sev = (c.severity || 'info').toLowerCase();
+ const url = c.url || '';
+ const endpoint = url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="subdomain-link" title="${escapeHtml(url)}">${escapeHtml(shortenURL(url))}</a>` : '<span class="text-muted">—</span>';
+ html += `<tr>
+ <td><span class="cve-pill">${escapeHtml(c.cve || '-')}</span></td>
+ <td><a href="/target/${encodeURIComponent(c.target)}" class="subdomain-link" style="font-weight:600">${escapeHtml(c.target)}</a></td>
+ <td><span class="status-badge status-${sev}">${sev}</span></td>
+ <td style="color:var(--text-primary)">${escapeHtml(c.name || '-')}</td>
+ <td class="mono" style="font-size:0.85em">${endpoint}</td>
+ </tr>`;
+ });
+ tbody.innerHTML = html;
+ }
+
+ function renderSecretsCard(secrets, byTool, total) {
+ const tbody = document.getElementById('secrets-tbody');
+ const sub = document.getElementById('secrets-sub');
+ const byToolEl = document.getElementById('secrets-bytool');
+ if (sub) sub.textContent = total > 0 ? `${total} leaked secrets across all targets` : 'Leaked credentials / tokens across all targets';
+
+ // By-tool breakdown pills
+ if (byToolEl) {
+ const entries = Object.entries(byTool || {}).sort((a,b) => b[1]-a[1]);
+ if (entries.length === 0) {
+ byToolEl.innerHTML = '';
+ } else {
+ byToolEl.innerHTML = entries.map(([t,c]) => `<span class="source-badge" style="text-transform:capitalize">${escapeHtml(t)}: ${c}</span>`).join('');
+ }
+ }
+
+ if (!secrets || secrets.length === 0) {
+ tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:24px">No secrets discovered yet</td></tr>`;
+ return;
+ }
+ let html = '';
+ secrets.forEach(s => {
+ const src = s.source_url || '';
+ const isWeb = src.startsWith('http://') || src.startsWith('https://');
+ const srcCell = src ? (isWeb ? `<a href="${escapeHtml(src)}" target="_blank" rel="noopener" class="subdomain-link" title="${escapeHtml(src)}">${escapeHtml(shortenURL(src))}</a>` : `<span class="mono" title="${escapeHtml(src)}">${escapeHtml(src)}</span>`) : '<span class="text-muted">—</span>';
+ html += `<tr>
+ <td><a href="/target/${encodeURIComponent(s.target)}" class="subdomain-link" style="font-weight:600">${escapeHtml(s.target)}</a></td>
+ <td>${escapeHtml(s.subdomain || '-')}</td>
+ <td><span class="source-badge" style="text-transform:capitalize">${escapeHtml(s.tool || '-')}</span></td>
+ <td>${escapeHtml(s.secret_type || '-')}</td>
+ <td class="mono" style="font-size:0.85em">${srcCell}</td>
+ <td class="mono" style="font-size:0.85em" title="${escapeHtml(s.raw_match || '')}">${escapeHtml(s.raw_match || '-')}</td>
+ </tr>`;
+ });
+ tbody.innerHTML = html;
+ }
+
+ // Open ports card: a frequency graph (top ports by host count) plus a
+ // table of the most recent host:port findings across all targets.
+ function renderPortsCard(ports, byNumber, total) {
+ const tbody = document.getElementById('ports-tbody');
+ const sub = document.getElementById('ports-sub');
+ const graph = document.getElementById('ports-graph');
+ if (sub) sub.textContent = total > 0 ? `${total} open ports across all targets` : 'Discovered open ports across all targets';
+
+ // Frequency graph: top ports by host count.
+ if (graph) {
+ const entries = Object.entries(byNumber || {}).sort((a,b) => b[1]-a[1]).slice(0, 8);
+ if (entries.length === 0) {
+ graph.innerHTML = '';
+ } else {
+ const max = entries[0][1] || 1;
+ graph.innerHTML = entries.map(([p,c]) => {
+ const w = Math.max((c / max) * 100, 6);
+ return `<div class="port-bar-row">
+ <span class="port-bar-lbl">${escapeHtml(p)}</span>
+ <div class="port-bar-track"><div class="port-bar-fill" style="width:${w.toFixed(1)}%"></div></div>
+ <span class="port-bar-count">${c}</span>
+ </div>`;
+ }).join('');
+ }
+ }
+
+ if (!ports || ports.length === 0) {
+ tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center;padding:24px">No open ports discovered yet</td></tr>`;
+ return;
+ }
+ let html = '';
+ ports.forEach(p => {
+ const svc = p.service || '';
+ const svcCell = svc ? `<span class="source-badge">${escapeHtml(svc)}</span>` : '<span class="text-muted">—</span>';
+ html += `<tr>
+ <td><a href="/target/${encodeURIComponent(p.target)}" class="subdomain-link" style="font-weight:600">${escapeHtml(p.target)}</a></td>
+ <td>${escapeHtml(p.subdomain || '-')}</td>
+ <td class="mono" style="font-weight:700;color:var(--text-primary)">${p.port}</td>
+ <td class="mono">${escapeHtml(p.protocol || '-')}</td>
+ <td>${svcCell}</td>
+ </tr>`;
+ });
+ tbody.innerHTML = html;
+ }
+
+ function renderTargetList(targets) {
+ const list = document.getElementById('dash-target-list');
+ const countEl = document.getElementById('side-target-count');
+ countEl.textContent = targets.length;
+ window.__allTargets = targets;
+ applyTargetFilter();
+ }
+
+ function applyTargetFilter() {
+ const list = document.getElementById('dash-target-list');
+ const q = (document.getElementById('target-search').value || '').toLowerCase();
+ const targets = (window.__allTargets || []).filter(t => !q || (t.name || '').toLowerCase().includes(q));
+ if (targets.length === 0) {
+ list.innerHTML = `<div class="dash-side-empty">${q ? 'No targets match your filter' : 'No targets scanned yet'}<br><button onclick="openScanDrawer()" class="btn btn-primary" style="margin-top:14px">Launch First Scan</button></div>`;
+ return;
+ }
+ let html = '';
+ targets.forEach(t => {
+ const running = t.scan_status === 'running';
+ const total = t.total_vulns || 0;
+ const crit = t.critical || 0;
+ const cardCls = crit > 0 ? 'has-critical' : (total > 0 ? 'has-vulns' : 'clean');
+ let bar = '';
+ if (total > 0) {
+ bar = '<div class="mini-sev-bar">';
+ SEV_ORDER.forEach(s => {
+ const c = t[s] || 0;
+ if (c > 0) bar += `<div class="mini-sev-seg ${s}" style="width:${(c/total*100).toFixed(2)}%" title="${s}: ${c}"></div>`;
+ });
+ bar += '</div>';
+ } else {
+ bar = '<div class="mini-sev-bar"><div class="mini-sev-seg none" style="width:100%"></div></div>';
+ }
+ html += `<a href="/target/${encodeURIComponent(t.name)}" class="dash-target-row ${cardCls}">
+ <div class="dtr-top">
+ <span class="dtr-name">${escapeHtml(t.name)}</span>
+ ${running ? '<span class="status-badge status-running">Running</span>' : `<span class="dtr-vulns">${total}</span>`}
+ </div>
+ <div class="dtr-stats">
+ <span title="Critical"><span class="sev-dot critical"></span>${crit}</span>
+ <span title="High"><span class="sev-dot high"></span>${t.high || 0}</span>
+ <span title="Medium"><span class="sev-dot medium"></span>${t.medium || 0}</span>
+ <span title="Subdomains">◎ ${t.total_subdomains || 0}</span>
+ <span title="Open Ports">⚓ ${t.total_ports || 0}</span>
+ </div>
+ ${bar}
+ <button type="button" class="dtr-delete" data-target="${escapeHtml(t.name)}" title="Delete target" aria-label="Delete target ${escapeHtml(t.name)}">✕</button>
+ </a>`;
+ });
+ list.innerHTML = html;
+ }
+
+ // ── helpers ──
+ function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+ function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+ function shortenURL(u) { try { const x = new URL(u); return (x.hostname + x.pathname).slice(0, 48); } catch { return String(u).slice(0, 48); } }
+
+ // Delete a target from the dashboard side list. Wired via event delegation
+ // on the list container so the target name is read from the button's
+ // data-target attribute (no inline JS string quoting pitfalls). The click
+ // is stopped before it bubbles to the surrounding <a>, then the dashboard
+ // re-renders after the delete resolves so the row vanishes without a reload.
+ (function wireDeleteDelegation() {
+ const list = document.getElementById('dash-target-list');
+ if (!list || list.__deleteWired) return;
+ list.__deleteWired = true;
+ list.addEventListener('click', function(ev) {
+ const btn = ev.target.closest('.dtr-delete');
+ if (!btn) return;
+ ev.preventDefault();
+ ev.stopPropagation();
+ const target = btn.dataset.target || '';
+ if (!target) return;
+ deleteTarget(target, { redirect: false, onDeleted: function() { loadDashboard(); } });
+ });
+ })();
+
+ // Live filter wiring.
+ document.addEventListener('DOMContentLoaded', () => {
+ const s = document.getElementById('target-search');
+ if (s) s.addEventListener('input', applyTargetFilter);
+ });
+
+ loadDashboard();
+ // Auto-refresh so running scans stream into the panels.
+ setInterval(loadDashboard, 5000);
+ </script>
+</body>
+</html>

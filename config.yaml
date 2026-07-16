@@ -1,0 +1,93 @@
+target: ""
+output_dir: ~/dark_recon_results
+threads: 200
+timeout: 10
+auto_install: true
+top_subdomains_for_scanning: 10
+skip_phases: []
+seclists:
+    base_dir: /usr/share/wordlists/seclists
+    dns_wordlist: /usr/share/wordlists/seclists/Discovery/DNS/subdomains-top1million-5000.txt
+    dir_common: /usr/share/wordlists/seclists/Discovery/Web-Content/common.txt
+    dir_big: /usr/share/wordlists/seclists/Discovery/Web-Content/big.txt
+    dir_medium: /usr/share/wordlists/seclists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt
+    api_endpoints: /usr/share/wordlists/seclists/Discovery/Web-Content/api/api-endpoints.txt
+nuclei:
+    templates: ~/nuclei-templates
+    severity:
+        - critical
+        - high
+    rate: 250
+    concurrent: 50
+    cvss_min: 8
+    timeout: 90
+    bulk_size: 50
+katana:
+    depth: 3
+    concurrency: 50
+    headless: true
+    js_parse: true
+priority_keywords:
+    critical:
+        - admin
+        - api
+        - staging
+        - internal
+        - vpn
+        - auth
+        - login
+        - dashboard
+        - console
+        - manage
+    high:
+        - dev
+        - test
+        - uat
+        - beta
+        - app
+        - portal
+        - gateway
+        - control
+        - panel
+        - root
+    medium:
+        - www
+        - mail
+        - cdn
+        - static
+        - blog
+        - shop
+        - store
+        - media
+exposed_path_scores:
+    .env: 20
+    .git: 15
+    /.htaccess: 6
+    /.svn: 12
+    /actuator: 10
+    /admin: 10
+    /api/docs: 10
+    /backup: 8
+    /config: 8
+    /debug: 6
+    /graphql: 8
+    /phpmyadmin: 12
+    /server-info: 8
+    /server-status: 8
+    /swagger: 10
+    /wp-admin: 10
+    /wp-config.php: 15
+phase1:
+    passive_recon: false
+    port_scan: false
+    waf_detect: false
+    js_analysis: true
+    param_discovery: false
+    secret_scan: false
+    chaos_api_key: ""
+    passive_recon_workers: 5
+    port_scan_workers: 50
+    waf_workers: 20
+    js_analysis_workers: 30
+    param_discovery_workers: 5
+    secret_scan_workers: 10
