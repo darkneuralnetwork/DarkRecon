@@ -804,8 +804,6 @@ You are free to use, study, modify, and distribute this software, provided all d
 
 🦇 From domain → prioritized attack plan, in minutes.
 
-**DarkCode is not just an assistant. It is a foundation for building intelligent systems.**
-
 </div>
 
 ---
