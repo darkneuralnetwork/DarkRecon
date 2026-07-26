@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Account</title>
+ <link rel="stylesheet" href="/static/style.css">
+ <style>
+  /* Account page layout */
+  .account-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-top: 8px;
+  }
+  @media (max-width: 900px) { .account-grid { grid-template-columns: 1fr; } }
+
+  .account-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px 28px;
+    box-shadow: var(--shadow-md);
+  }
+  .account-card h2 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .account-card .card-subtitle {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    margin: 0 0 22px;
+  }
+
+  /* Profile identity block */
+  .profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .profile-avatar {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--grad-accent);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+    box-shadow: var(--shadow-glow);
+  }
+  .profile-avatar svg { width: 28px; height: 28px; }
+  .profile-info h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  .profile-info p { margin: 0; color: var(--text-muted); font-size: 0.82rem; }
+
+  .profile-meta {
+    display: flex; flex-direction: column; gap: 12px;
+    margin-top: 20px;
+  }
+  .meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-label { color: var(--text-muted); }
+  .meta-value { color: var(--text-primary); font-family: var(--font-mono); font-size: 0.85rem; }
+  .meta-value.status-on { color: var(--accent-2); }
+  .meta-value.status-off { color: var(--text-muted); }
+
+  /* Password form */
+  .pw-form { display: flex; flex-direction: column; gap: 16px; }
+  .pw-form .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .pw-form .form-label { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
+  .pw-form .form-input {
+    width: 100%; padding: 11px 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-family: inherit;
+    transition: var(--transition-fast);
+    box-sizing: border-box;
+  }
+  .pw-form .form-input:focus { outline: none; border-color: var(--accent-1); box-shadow: var(--ring); }
+  .pw-form .form-hint { font-size: 0.76rem; color: var(--text-muted); margin-top: 2px; }
+
+  .pw-strength {
+    height: 5px; border-radius: 3px; background: var(--bg-2); overflow: hidden;
+    margin-top: 6px; transition: var(--transition-fast);
+  }
+  .pw-strength-bar { height: 100%; width: 0; transition: width 0.3s, background 0.3s; border-radius: 3px; }
+
+  .pw-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .pw-actions .btn { flex: 1; justify-content: center; }
+
+  .pw-alert {
+    display: none;
+    padding: 11px 15px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    align-items: center;
+    gap: 9px;
+  }
+  .pw-alert.show { display: flex; }
+  .pw-alert.error { background: var(--critical-bg); border: 1px solid rgba(244,63,94,0.4); color: var(--critical); }
+  .pw-alert.success { background: var(--low-bg); border: 1px solid rgba(52,211,153,0.4); color: var(--low); }
+
+  .danger-zone {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .danger-zone h3 {
+    margin: 0 0 14px;
+    font-size: 0.92rem;
+    color: var(--critical);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .btn-logout-full {
+    width: 100%;
+    padding: 13px;
+    background: var(--critical-bg);
+    border: 1px solid rgba(244,63,94,0.4);
+    color: var(--critical);
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+  }
+  .btn-logout-full:hover { background: rgba(244,63,94,0.22); border-color: var(--critical); }
+  .btn-logout-full:active { transform: translateY(1px); }
+ </style>
+</head>
+<body>
+ <main class="main-content">
+  <div class="page-header">
+   <div class="page-header-left">
+    <h1>Account</h1>
+    <span class="dash-subtitle">Manage your administrator profile</span>
+   </div>
+  </div>
+
+  <div class="account-grid">
+
+   <!-- ── Profile / Identity ── -->
+   <div class="account-card">
+    <h2>
+     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+     Profile
+    </h2>
+    <p class="card-subtitle">Your signed-in administrator identity</p>
+
+    <div class="profile-identity">
+     <div class="profile-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+     </div>
+     <div class="profile-info">
+      <h3 id="profile-username">admin</h3>
+      <p>Administrator</p>
+     </div>
+    </div>
+
+    <div class="profile-meta">
+     <div class="meta-row">
+      <span class="meta-label">Role</span>
+      <span class="meta-value">Administrator</span>
+     </div>
+     <div class="meta-row">
+      <span class="meta-label">Authentication</span>
+      <span class="meta-value status-on" id="profile-auth-status">Enabled</span>
+     </div>
+     <div class="meta-row">
+      <span class="meta-label">Session Type</span>
+      <span class="meta-value">Browser Session</span>
+     </div>
+     <div class="meta-row">
+      <span class="meta-label">Session TTL</span>
+      <span class="meta-value" id="profile-session-ttl">24h</span>
+     </div>
+    </div>
+
+    <div class="danger-zone">
+     <h3>Session</h3>
+     <button class="btn-logout-full" id="logout-full-btn" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Sign Out</span>
+     </button>
+    </div>
+   </div>
+
+   <!-- ── Change Password ── -->
+   <div class="account-card">
+    <h2>
+     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+     Change Password
+    </h2>
+    <p class="card-subtitle">Update your password — all active sessions will be revoked</p>
+
+    <div class="pw-alert error" id="pw-error">
+     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+     <span id="pw-error-text"></span>
+    </div>
+    <div class="pw-alert success" id="pw-success">
+     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+     <span id="pw-success-text">Password changed successfully.</span>
+    </div>
+
+    <form class="pw-form" id="pw-form" autocomplete="on">
+     <div class="form-group">
+      <label class="form-label" for="current-pw">Current Password</label>
+      <input type="password" id="current-pw" class="form-input" required autocomplete="current-password">
+     </div>
+     <div class="form-group">
+      <label class="form-label" for="new-pw">New Password</label>
+      <input type="password" id="new-pw" class="form-input" required autocomplete="new-password" minlength="6">
+      <div class="pw-strength"><div class="pw-strength-bar" id="pw-strength-bar"></div></div>
+      <span class="form-hint">Minimum 6 characters</span>
+     </div>
+     <div class="form-group">
+      <label class="form-label" for="confirm-pw">Confirm New Password</label>
+      <input type="password" id="confirm-pw" class="form-input" required autocomplete="new-password" minlength="6">
+      <span class="form-hint" id="match-hint"></span>
+     </div>
+     <div class="pw-actions">
+      <button type="button" class="btn btn-secondary" id="pw-clear-btn">Clear</button>
+      <button type="submit" class="btn btn-primary" id="pw-submit-btn">
+       <span class="spinner" style="display:none;"></span>
+       <span>Update Password</span>
+      </button>
+     </div>
+    </form>
+   </div>
+
+  </div>
+ </main>
+
+ <script>
+  (function () {
+    // ── Load profile data ──
+    async function loadProfile() {
+      try {
+        const resp = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.username) document.getElementById('profile-username').textContent = data.username;
+        const authStatus = document.getElementById('profile-auth-status');
+        if (authStatus) {
+          authStatus.textContent = data.auth_enabled ? 'Enabled' : 'Disabled';
+          authStatus.className = 'meta-value ' + (data.auth_enabled ? 'status-on' : 'status-off');
+        }
+      } catch (e) { /* ignore */ }
+
+      // Session TTL from config
+      try {
+        const resp = await fetch('/api/config', { credentials: 'same-origin' });
+        if (resp.ok) {
+          const cfg = await resp.json();
+          if (cfg.auth && cfg.auth.session_ttl) {
+            const el = document.getElementById('profile-session-ttl');
+            if (el) el.textContent = cfg.auth.session_ttl;
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // ── Password strength meter ──
+    function scorePassword(pw) {
+      let score = 0;
+      if (!pw) return 0;
+      if (pw.length >= 6) score += 25;
+      if (pw.length >= 10) score += 15;
+      if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 20;
+      if (/\d/.test(pw)) score += 20;
+      if (/[^a-zA-Z0-9]/.test(pw)) score += 20;
+      return Math.min(score, 100);
+    }
+
+    const newPw = document.getElementById('new-pw');
+    const confirmPw = document.getElementById('confirm-pw');
+    const strengthBar = document.getElementById('pw-strength-bar');
+    const matchHint = document.getElementById('match-hint');
+
+    newPw.addEventListener('input', function () {
+      const score = scorePassword(newPw.value);
+      strengthBar.style.width = score + '%';
+      if (score < 40) strengthBar.style.background = 'var(--critical)';
+      else if (score < 70) strengthBar.style.background = 'var(--medium)';
+      else strengthBar.style.background = 'var(--accent-2)';
+      checkMatch();
+    });
+    confirmPw.addEventListener('input', checkMatch);
+
+    function checkMatch() {
+      if (!confirmPw.value) { matchHint.textContent = ''; return; }
+      if (newPw.value === confirmPw.value) {
+        matchHint.textContent = '✓ Passwords match';
+        matchHint.style.color = 'var(--accent-2)';
+      } else {
+        matchHint.textContent = '✗ Passwords do not match';
+        matchHint.style.color = 'var(--critical)';
+      }
+    }
+
+    // ── Alerts ──
+    function showError(msg) {
+      const box = document.getElementById('pw-error');
+      document.getElementById('pw-error-text').textContent = msg;
+      box.classList.add('show');
+      document.getElementById('pw-success').classList.remove('show');
+    }
+    function showSuccess(msg) {
+      const box = document.getElementById('pw-success');
+      document.getElementById('pw-success-text').textContent = msg;
+      box.classList.add('show');
+      document.getElementById('pw-error').classList.remove('show');
+    }
+    function hideAlerts() {
+      document.getElementById('pw-error').classList.remove('show');
+      document.getElementById('pw-success').classList.remove('show');
+    }
+
+    // ── Submit ──
+    const form = document.getElementById('pw-form');
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      hideAlerts();
+
+      const current = document.getElementById('current-pw').value;
+      const next = newPw.value;
+      const confirm = confirmPw.value;
+
+      if (next !== confirm) { showError('New passwords do not match'); return; }
+      if (next.length < 6) { showError('New password must be at least 6 characters'); return; }
+      if (next === current) { showError('New password must be different from the current one'); return; }
+
+      const btn = document.getElementById('pw-submit-btn');
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+
+      try {
+        const resp = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password: current, new_password: next }),
+          credentials: 'same-origin',
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (resp.ok) {
+          showSuccess(data.message || 'Password changed. Redirecting to login…');
+          form.reset();
+          strengthBar.style.width = '0';
+          matchHint.textContent = '';
+          // Sessions are revoked server-side → redirect to login after a beat.
+          setTimeout(() => { window.location.href = '/login'; }, 1800);
+        } else {
+          showError(data.error || 'Failed to change password');
+        }
+      } catch (err) {
+        showError('Network error — please retry');
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    });
+
+    // ── Clear button ──
+    document.getElementById('pw-clear-btn').addEventListener('click', function () {
+      form.reset();
+      hideAlerts();
+      strengthBar.style.width = '0';
+      matchHint.textContent = '';
+    });
+
+    // ── Logout button ──
+    document.getElementById('logout-full-btn').addEventListener('click', async function () {
+      try { await fetch('/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+      window.location.href = '/login';
+    });
+
+    loadProfile();
+  })();
+ </script>
+</body>
+</html>

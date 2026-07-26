@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Settings</title>
+ <link rel="stylesheet" href="/static/style.css">
+ <style>
+  /* Path field with inline Browse button */
+  .path-input-row { display: flex; gap: 8px; align-items: stretch; }
+  .path-input-row .form-input { flex: 1; min-width: 0; }
+  .btn-browse { white-space: nowrap; padding: 0 14px; }
+  /* Directory picker modal */
+  .dir-browser-list {
+    margin: 12px 0;
+    max-height: 50vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2, var(--black-surface, #0e1320));
+  }
+  .dir-browser-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer; font-size: 0.9em;
+    border-bottom: 1px solid var(--border);
+    transition: var(--transition-fast, 0.15s);
+  }
+  .dir-browser-item:last-child { border-bottom: none; }
+  .dir-browser-item:hover { background: var(--accent-glow, rgba(59,130,246,0.12)); color: var(--text-primary); }
+  .dir-browser-item .dir-icon { opacity: 0.8; }
+  .dir-browser-current {
+    display: flex; gap: 8px; align-items: center;
+    padding: 8px 0;
+  }
+  .dir-browser-current .form-input { flex: 1; font-family: var(--font-mono, monospace); font-size: 0.85em; }
+  .dir-browser-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .dir-browser-empty { padding: 18px; text-align: center; color: var(--text-muted); font-size: 0.88em; }
+ </style>
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <a href="/" class="back-link">← Dashboard</a>
+ <h1>Settings</h1>
+ </div>
+ <div class="page-header-actions">
+ <button onclick="saveConfig()" class="btn btn-primary" id="save-btn"> Save Config</button>
+ </div>
+ </div>
+
+ <div class="section">
+ <div class="section-header">
+ <span class="section-title"> General Settings</span>
+ <span class="section-toggle">▼</span>
+ </div>
+ <div class="section-body">
+ <div class="form-row">
+ <div class="form-group">
+ <label class="form-label"> Threads</label>
+ <input type="number" id="cfg-threads" class="form-input" value="50" min="1" max="500">
+ <span class="form-hint">Default: 50</span>
+ </div>
+ <div class="form-group">
+ <label class="form-label"> HTTP Timeout (s)</label>
+ <input type="number" id="cfg-timeout" class="form-input" value="10" min="1" max="120">
+ <span class="form-hint">Default: 10</span>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group">
+ <label class="form-label"> Top Subdomains for Scanning</label>
+ <input type="number" id="cfg-top-subdomains" class="form-input" value="10" min="1" max="100">
+ <span class="form-hint">Top N subdomains for Katana + ffuf</span>
+ </div>
+ <div class="form-group">
+ <label class="form-label"> Auto-install Tools</label>
+ <select id="cfg-auto-install" class="form-input">
+ <option value="true">Enabled</option>
+ <option value="false">Disabled</option>
+ </select>
+ <span class="form-hint">Auto-install missing tools on scan start</span>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="section">
+ <div class="section-header">
+ <span class="section-title"> Nuclei Configuration</span>
+ <span class="section-toggle">▼</span>
+ </div>
+ <div class="section-body">
+ <div class="form-group">
+ <label class="form-label">Templates Directory</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-nuclei-templates" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-nuclei-templates')">📁 Browse</button>
+ </div>
+ <span class="form-hint">Path to nuclei templates</span>
+ </div>
+ <div class="form-row">
+ <div class="form-group">
+ <label class="form-label">Rate Limit (req/s)</label>
+ <input type="number" id="cfg-nuclei-rate" class="form-input" value="100" min="1" max="1000">
+ <span class="form-hint">Default: 100</span>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Concurrent Templates</label>
+ <input type="number" id="cfg-nuclei-concurrent" class="form-input" value="50" min="1" max="500">
+ <span class="form-hint">Default: 50</span>
+ </div>
+ </div>
+ <div class="form-row">
+ <div class="form-group">
+ <label class="form-label">Min CVSS Score</label>
+ <input type="number" id="cfg-nuclei-cvss" class="form-input" value="6.5" min="0" max="10" step="0.1">
+ <span class="form-hint">Default: 6.5</span>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Severity Filter</label>
+ <input type="text" id="cfg-nuclei-severity" class="form-input" value="critical, high, medium">
+ <span class="form-hint">Comma-separated: critical, high, medium, low, info</span>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="section">
+ <div class="section-header">
+ <span class="section-title"> SecLists / Wordlists</span>
+ <span class="section-toggle">▼</span>
+ </div>
+ <div class="section-body">
+ <div class="form-group">
+ <label class="form-label">SecLists Base Directory</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-seclists-dir" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-seclists-dir')">📁 Browse</button>
+ </div>
+ <span class="form-hint">Choose the SecLists root; wordlists default under it.</span>
+ <div style="margin-top:6px;">
+ <button type="button" class="btn btn-small btn-secondary" onclick="applySecListsDefaults(true)">↻ Fill wordlist defaults</button>
+ </div>
+ </div>
+ <div class="form-group">
+ <label class="form-label">DNS Wordlist</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-dns-wordlist" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-dns-wordlist')">📁</button>
+ </div>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Directory Common Wordlist</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-dir-common" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-dir-common')">📁</button>
+ </div>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Directory Big Wordlist</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-dir-big" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-dir-big')">📁</button>
+ </div>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Directory Medium Wordlist</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-dir-medium" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-dir-medium')">📁</button>
+ </div>
+ </div>
+ <div class="form-group">
+ <label class="form-label">API Endpoints Wordlist</label>
+ <div class="path-input-row">
+ <input type="text" id="cfg-api-wordlist" class="form-input" value="">
+ <button type="button" class="btn btn-secondary btn-browse" onclick="openDirBrowser('cfg-api-wordlist')">📁</button>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="section">
+ <div class="section-header">
+ <span class="section-title"> Output Directory</span>
+ <span class="section-toggle">▼</span>
+ </div>
+ <div class="section-body">
+ <div class="form-group">
+ <label class="form-label">Base Results Directory</label>
+ <input type="text" class="form-input" id="cfg-base-dir" value="" readonly>
+ <span class="form-hint">Configured via config.yaml output_dir. Edit the file directly to change.</span>
+ </div>
+ <div class="form-group">
+ <label class="form-label">Config File Path</label>
+ <input type="text" class="form-input" id="cfg-config-path" value="" readonly>
+ </div>
+ </div>
+ </div>
+
+ <!-- Directory browser modal -->
+ <div class="modal-overlay" id="dir-browser-overlay" onclick="if(event.target===this)closeDirBrowser()">
+ <div class="modal" style="max-width:620px;">
+ <div class="modal-header">
+ <h3>📁 Choose Directory</h3>
+ <button class="modal-close" onclick="closeDirBrowser()">&times;</button>
+ </div>
+ <div class="modal-body">
+ <div class="dir-browser-current">
+ <button type="button" class="btn btn-secondary btn-small" onclick="dirBrowseUp()">↑ Up</button>
+ <input type="text" id="dir-browser-path" class="form-input" value="/" readonly>
+ </div>
+ <div class="dir-browser-list" id="dir-browser-list">
+ <div class="dir-browser-empty">Loading…</div>
+ </div>
+ <div class="dir-browser-actions">
+ <button type="button" class="btn btn-secondary" onclick="closeDirBrowser()">Cancel</button>
+ <button type="button" class="btn btn-primary" onclick="selectDirBrowser()">Select</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ async function loadConfig() {
+ try {
+ const resp = await fetch('/api/config');
+ const cfg = await resp.json();
+
+ document.getElementById('cfg-threads').value = cfg.threads || 50;
+ document.getElementById('cfg-timeout').value = cfg.timeout || 10;
+ document.getElementById('cfg-top-subdomains').value = cfg.top_subdomains_for_scanning || 10;
+
+ const autoInstall = document.getElementById('cfg-auto-install');
+ autoInstall.value = cfg.auto_install ? 'true' : 'false';
+
+ document.getElementById('cfg-nuclei-templates').value = cfg.nuclei_templates_dir || '';
+ document.getElementById('cfg-nuclei-rate').value = cfg.nuclei_rate || 100;
+ document.getElementById('cfg-nuclei-concurrent').value = cfg.nuclei_concurrent || 50;
+ document.getElementById('cfg-nuclei-cvss').value = cfg.nuclei_cvss_min || 6.5;
+
+ const severity = Array.isArray(cfg.nuclei_severity) ? cfg.nuclei_severity.join(', ') : (cfg.nuclei_severity || 'critical, high, medium');
+ document.getElementById('cfg-nuclei-severity').value = severity;
+
+ document.getElementById('cfg-seclists-dir').value = cfg.seclists_base_dir || cfg.seclists_dir || '';
+ document.getElementById('cfg-dns-wordlist').value = cfg.dns_wordlist || '';
+ document.getElementById('cfg-dir-common').value = cfg.dir_common_wordlist || '';
+ document.getElementById('cfg-dir-big').value = cfg.dir_big_wordlist || '';
+ document.getElementById('cfg-dir-medium').value = cfg.dir_medium_wordlist || '';
+ document.getElementById('cfg-api-wordlist').value = cfg.api_endpoints_wordlist || '';
+ document.getElementById('cfg-base-dir').value = cfg.base_dir || cfg.output_dir || '';
+ document.getElementById('cfg-config-path').value = cfg.config_path || 'config.yaml';
+ } catch (e) {
+ showToast('Failed to load config', 'error');
+ }
+ }
+
+ function saveConfig() {
+ const btn = document.getElementById('save-btn');
+ btn.disabled = true;
+ btn.innerHTML = ' Saving...';
+
+ const severityStr = document.getElementById('cfg-nuclei-severity').value;
+ const severityList = severityStr.split(',').map(s => s.trim()).filter(s => s);
+
+ const body = {
+ threads: parseInt(document.getElementById('cfg-threads').value),
+ timeout: parseInt(document.getElementById('cfg-timeout').value),
+ auto_install: document.getElementById('cfg-auto-install').value === 'true',
+ nuclei_templates_dir: document.getElementById('cfg-nuclei-templates').value,
+ nuclei_severity: severityList,
+ nuclei_rate: parseInt(document.getElementById('cfg-nuclei-rate').value),
+ nuclei_concurrent: parseInt(document.getElementById('cfg-nuclei-concurrent').value),
+ nuclei_cvss_min: parseFloat(document.getElementById('cfg-nuclei-cvss').value),
+ seclists_base_dir: document.getElementById('cfg-seclists-dir').value,
+ dns_wordlist: document.getElementById('cfg-dns-wordlist').value,
+ dir_common_wordlist: document.getElementById('cfg-dir-common').value,
+ dir_big_wordlist: document.getElementById('cfg-dir-big').value,
+ dir_medium_wordlist: document.getElementById('cfg-dir-medium').value,
+ api_endpoints_wordlist: document.getElementById('cfg-api-wordlist').value,
+ top_subdomains_for_scanning: parseInt(document.getElementById('cfg-top-subdomains').value),
+ };
+
+ fetch('/api/config', {
+ method: 'PUT',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify(body),
+ })
+ .then(resp => resp.json())
+ .then(data => {
+ if (data.error) throw new Error(data.error);
+ showToast('Configuration saved to config.yaml!');
+ })
+ .catch(err => {
+ showToast('Save failed: ' + err.message, 'error');
+ })
+ .finally(() => {
+ btn.disabled = false;
+ btn.innerHTML = ' Save Config';
+ });
+ }
+
+ // ── Directory browser (SecLists base dir / wordlists / nuclei templates) ──
+ let dirBrowserTarget = null; // id of the input to fill on Select
+ let dirBrowserCurrent = '/';
+
+ async function loadDirBrowser(path) {
+ dirBrowserCurrent = path || '/';
+ document.getElementById('dir-browser-path').value = dirBrowserCurrent;
+ const list = document.getElementById('dir-browser-list');
+ list.innerHTML = '<div class="dir-browser-empty">Loading…</div>';
+ try {
+ const resp = await fetch('/api/fs/dirs?path=' + encodeURIComponent(dirBrowserCurrent));
+ const data = await resp.json();
+ const dirs = data.dirs || [];
+ dirBrowserCurrent = data.path || dirBrowserCurrent;
+ document.getElementById('dir-browser-path').value = dirBrowserCurrent;
+ if (!dirs.length) {
+ list.innerHTML = '<div class="dir-browser-empty">No subdirectories here.</div>';
+ return;
+ }
+ list.innerHTML = dirs.map(d =>
+ `<div class="dir-browser-item" onclick="loadDirBrowser('${d.path.replace(/'/g, "\\'")}')">
+ <span class="dir-icon">📁</span><span>${escapeHtml(d.name)}</span>
+ </div>`
+ ).join('');
+ } catch (e) {
+ list.innerHTML = '<div class="dir-browser-empty">Failed to read directory.</div>';
+ }
+ }
+
+ function openDirBrowser(inputId) {
+ dirBrowserTarget = inputId;
+ const el = document.getElementById(inputId);
+ let start = el && el.value ? el.value.trim() : '';
+ if (!start) start = '/usr/share';
+ loadDirBrowser(start);
+ document.getElementById('dir-browser-overlay').classList.add('visible');
+ }
+
+ function closeDirBrowser() {
+ document.getElementById('dir-browser-overlay').classList.remove('visible');
+ dirBrowserTarget = null;
+ }
+
+ async function dirBrowseUp() {
+ const resp = await fetch('/api/fs/dirs?path=' + encodeURIComponent(dirBrowserCurrent));
+ const data = await resp.json();
+ loadDirBrowser(data.parent || '/');
+ }
+
+ function selectDirBrowser() {
+ if (!dirBrowserTarget) { closeDirBrowser(); return; }
+ const input = document.getElementById(dirBrowserTarget);
+ if (input) input.value = dirBrowserCurrent;
+ const wasBase = dirBrowserTarget === 'cfg-seclists-dir';
+ closeDirBrowser();
+ // When the SecLists base dir is chosen, auto-fill empty wordlist defaults.
+ if (wasBase) applySecListsDefaults(false);
+ }
+
+ // Fill empty wordlist fields with the standard SecLists defaults under the
+ // current base dir. Pass force=true to overwrite non-empty values too.
+ function applySecListsDefaults(force) {
+ const base = (document.getElementById('cfg-seclists-dir').value || '').trim().replace(/\/+$/, '');
+ if (!base) { showToast('Set a SecLists base directory first', 'error'); return; }
+ const defs = {
+ 'cfg-dns-wordlist': 'Discovery/DNS/subdomains-top1million-5000.txt',
+ 'cfg-dir-common': 'Discovery/Web-Content/common.txt',
+ 'cfg-dir-big': 'Discovery/Web-Content/big.txt',
+ 'cfg-dir-medium': 'Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt',
+ 'cfg-api-wordlist': 'Discovery/Web-Content/api/api-endpoints.txt'
+ };
+ let filled = 0;
+ for (const [id, rel] of Object.entries(defs)) {
+ const el = document.getElementById(id);
+ if (!el) continue;
+ if (force || !el.value.trim()) { el.value = base + '/' + rel; filled++; }
+ }
+ showToast(filled ? `Filled ${filled} wordlist path(s)` : 'All wordlists already set');
+ }
+
+ function escapeHtml(s) {
+ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ }
+
+ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDirBrowser(); });
+
+ loadConfig();
+ </script>
+</body>
+</html>

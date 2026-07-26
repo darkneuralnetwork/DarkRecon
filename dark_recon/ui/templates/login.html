@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <title>Dark-Recon - Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Login page is a standalone shell (no topbar) centered on the viewport. */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(1200px 600px at 15% -10%, rgba(37,99,235,0.18), transparent 60%),
+                radial-gradient(1000px 500px at 110% 120%, rgba(16,185,129,0.14), transparent 55%),
+                var(--bg-0);
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            padding: 40px 36px 32px;
+            backdrop-filter: blur(14px);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            background: var(--grad-accent);
+        }
+
+        .login-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .login-logo-mark {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--grad-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: var(--shadow-glow);
+        }
+        .login-logo-mark svg { width: 30px; height: 30px; }
+        .login-brand h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: var(--grad-accent);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .login-brand p {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .login-form { display: flex; flex-direction: column; gap: 18px; }
+        .login-form .form-group { display: flex; flex-direction: column; gap: 7px; }
+        .login-form .form-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .login-form .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: var(--transition-fast);
+            box-sizing: border-box;
+        }
+        .login-form .form-input:focus {
+            outline: none;
+            border-color: var(--accent-1);
+            box-shadow: var(--ring);
+        }
+        .login-form .form-input::placeholder { color: var(--text-muted); }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--grad-accent);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .login-btn:hover { background: var(--grad-accent-hover); box-shadow: var(--shadow-glow); }
+        .login-btn:active { transform: translateY(1px); }
+        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .login-error {
+            display: none;
+            padding: 10px 14px;
+            background: var(--critical-bg);
+            border: 1px solid rgba(244,63,94,0.4);
+            border-radius: var(--radius-sm);
+            color: var(--critical);
+            font-size: 0.85rem;
+            align-items: center;
+            gap: 8px;
+        }
+        .login-error.show { display: flex; }
+
+        .login-hint {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .login-hint code {
+            font-family: var(--font-mono);
+            background: var(--bg-2);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--accent-2);
+            font-size: 0.78rem;
+        }
+
+        .login-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+        .login-btn.loading .login-spinner { display: block; }
+        .login-btn.loading .login-btn-label { opacity: 0.7; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-logo-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+            </div>
+            <h1>Dark-Recon</h1>
+            <p>Attack Surface Intelligence</p>
+        </div>
+
+        <div class="login-error" id="login-error">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="login-error-text">Invalid username or password</span>
+        </div>
+
+        <form class="login-form" id="login-form" autocomplete="on">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input"
+                       placeholder="admin" required autofocus autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-input"
+                       placeholder="••••••••" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="login-btn" id="login-submit">
+                <span class="login-spinner"></span>
+                <span class="login-btn-label">Sign In</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('login-form');
+            const errorBox = document.getElementById('login-error');
+            const errorText = document.getElementById('login-error-text');
+            const submitBtn = document.getElementById('login-submit');
+
+            // Surface a server-side error (e.g. from a form POST fallback).
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('error') === '1') {
+                errorText.textContent = 'Invalid username or password';
+                errorBox.classList.add('show');
+            }
+
+            function showError(msg) {
+                errorText.textContent = msg || 'Invalid username or password';
+                errorBox.classList.add('show');
+            }
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                errorBox.classList.remove('show');
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const next = params.get('next') || '/';
+
+                try {
+                    const resp = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password, next }),
+                        credentials: 'same-origin',
+                    });
+
+                    if (resp.ok) {
+                        // Session cookie is set; go to the requested page.
+                        window.location.href = next;
+                        return;
+                    }
+                    if (resp.status === 401) {
+                        showError('Invalid username or password');
+                    } else {
+                        let msg = 'Login failed';
+                        try {
+                            const data = await resp.json();
+                            if (data.error) msg = data.error;
+                        } catch (_) {}
+                        showError(msg);
+                    }
+                } catch (err) {
+                    showError('Network error — check the connection and retry');
+                } finally {
+                    submitBtn.classList.remove('loading');
+                    submitBtn.disabled = false;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

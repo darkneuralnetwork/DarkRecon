@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Scan Progress</title>
+ <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ <main class="main-content">
+ <div class="page-header">
+ <div class="page-header-left">
+ <a href="/" class="back-link" id="back-btn">← Dashboard</a>
+ <h1 id="page-title">Loading...</h1>
+ </div>
+ <div class="page-header-actions">
+ <button onclick="stopScan()" class="btn btn-danger" id="stop-btn" disabled>Stop Scan</button>
+ <a href="#" class="btn btn-secondary" id="view-results-btn" style="display:none;">View Results</a>
+ <a href="#" class="btn btn-primary" id="start-phase2-btn" style="display:none;" onclick="startPhase2(); return false;">Start Phase 2 →</a>
+ </div>
+ </div>
+
+ <div class="progress-container">
+ <div class="progress-bar">
+ <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+ </div>
+ <div class="progress-text" id="progress-text">Initializing...</div>
+ </div>
+
+ <div class="phase-tracker" id="phase-tracker">
+ <div class="phase-item" id="phase-subdomain_enum">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+ <div class="phase-name">Subdomain Enum</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-passive_recon">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+ <div class="phase-name">Passive Recon</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-live_check">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+ <div class="phase-name">Live Host Detection</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-tech_and_crawl">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+ <div class="phase-name">Tech Detection + Crawl</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-vuln_scan">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+ <div class="phase-name">Vuln + WAF + Ports</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-phase1_groupC">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M9 9h6v6H9z"/></svg></div>
+ <div class="phase-name">JS + Params + Secrets</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-priority_scoring">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+ <div class="phase-name">Priority Scoring</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-phase1_complete">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+ <div class="phase-name">Phase 1 Complete</div>
+ <div class="phase-status">pending</div>
+ </div>
+ <div class="phase-item" id="phase-done">
+ <div class="phase-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+ <div class="phase-name">Done</div>
+ <div class="phase-status">pending</div>
+ </div>
+ </div>
+
+ <!-- ── Phase 1: Live Findings Table (additive, Section 10.3) ── -->
+ <section id="live-findings">
+ <h3>Live Findings <span id="finding-count" class="badge">0</span></h3>
+ <div class="findings-stats" id="findings-stats" style="display:none;">
+ <span class="stat-pill"><strong id="stat-ports">0</strong> ports</span>
+ <span class="stat-pill"><strong id="stat-waf">0</strong> WAF</span>
+ <span class="stat-pill"><strong id="stat-secrets">0</strong> secrets</span>
+ <span class="stat-pill"><strong id="stat-js">0</strong> JS findings</span>
+ <span class="stat-pill"><strong id="stat-params">0</strong> params</span>
+ </div>
+ <table class="findings-table">
+ <thead>
+ <tr>
+ <th>Severity</th>
+ <th>Host</th>
+ <th>Tool</th>
+ <th>Name</th>
+ <th>WAF</th>
+ <th>Time</th>
+ </tr>
+ </thead>
+ <tbody id="findings-tbody">
+ <!-- Rows injected by pollFindings() -->
+ </tbody>
+ </table>
+ <div id="findings-empty" class="text-muted" style="padding:12px;">No findings yet — scans stream in here as Phase 1 modules run.</div>
+ </section>
+ </main>
+ <script src="/static/app.js"></script>
+ <script>
+ // Extract target from URL path: /scan/{target}/progress
+ const pathParts = window.location.pathname.split('/').filter(Boolean);
+ const target = pathParts.length >= 2 ? decodeURIComponent(pathParts[1]) : '';
+ document.getElementById('page-title').textContent = target;
+ document.getElementById('view-results-btn').href = `/target/${target}`;
+
+ let ws = null;
+ let wsRetries = 0;
+ const WS_MAX_RETRIES = 10;
+ const WS_BASE_DELAY = 1000;
+ let isNavigating = false;
+ let wsConnected = false;
+
+ function connectWebSocket() {
+ if (isNavigating || wsConnected) return;
+ 
+ const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+ const wsUrl = `${protocol}//${window.location.host}/ws/${target}`;
+ 
+ try {
+ ws = new WebSocket(wsUrl);
+
+ ws.onopen = function() {
+ wsRetries = 0;
+ wsConnected = true;
+ document.getElementById('stop-btn').disabled = false;
+ console.log('WebSocket connected');
+ };
+
+ ws.onmessage = function(event) {
+ try {
+ const data = JSON.parse(event.data);
+ if (data.type === 'logs') {
+ data.logs.forEach(log => { updateProgress(log.message, log.phase, log.progress); });
+ }
+ if (data.type === 'status') { updateStatus(data.status); }
+ if (data.type === 'done') {
+ updateStatus(data.status);
+ document.getElementById('stop-btn').style.display = 'none';
+ document.getElementById('view-results-btn').style.display = 'inline-flex';
+ // Stop polling findings once the scan is finished.
+ if (findingsPoll) { clearInterval(findingsPoll); findingsPoll = null; }
+ pollFindings(); // one final refresh so the table shows the complete set
+ if (data.redirect) {
+ setTimeout(() => { 
+ if (!isNavigating) window.location.href = data.redirect; 
+ }, 2000);
+ }
+ }
+ } catch (e) {
+ console.error('Error processing WebSocket message:', e);
+ }
+ };
+
+ ws.onclose = function() {
+ wsConnected = false;
+ if (isNavigating) return;
+ 
+ if (wsRetries >= WS_MAX_RETRIES) {
+ console.log('WebSocket disconnected. Max retries reached.');
+ return;
+ }
+ const delay = Math.min(WS_BASE_DELAY * Math.pow(2, wsRetries), 30000);
+ wsRetries++;
+ setTimeout(connectWebSocket, delay);
+ };
+
+ ws.onerror = function(err) { 
+ console.error('WebSocket error:', err); 
+ };
+ } catch (e) {
+ console.error('Failed to connect WebSocket:', e);
+ }
+ }
+
+ function updateProgress(message, phase, progress) {
+ try {
+ const progressText = document.getElementById('progress-text');
+ const progressFill = document.getElementById('progress-fill');
+ 
+ if (progressText) {
+ progressText.textContent = message;
+ }
+ if (progressFill && progress !== undefined && progress !== null) {
+ const pct = Math.round(progress * 100);
+ progressFill.style.width = pct + '%';
+ }
+ if (phase) { updatePhaseTracker(phase); }
+ } catch (e) {
+ console.error('Error updating progress:', e);
+ }
+ }
+
+ function updatePhaseTracker(activePhase) {
+ try {
+ const phaseOrder = ['subdomain_enum', 'passive_recon', 'live_check', 'tech_and_crawl', 'vuln_scan', 'phase1_groupC', 'priority_scoring', 'phase1_complete', 'done'];
+ const activeIdx = phaseOrder.indexOf(activePhase);
+ phaseOrder.forEach((p, idx) => {
+ const el = document.getElementById(`phase-${p}`);
+ if (!el) return;
+ const statusEl = el.querySelector('.phase-status');
+ if (!statusEl) return;
+
+ if (activeIdx === -1) {
+ // Unknown phase — leave chips as-is
+ return;
+ }
+ if (idx < activeIdx) {
+ statusEl.textContent = 'done';
+ statusEl.className = 'phase-status done';
+ }
+ else if (idx === activeIdx) {
+ statusEl.textContent = 'running';
+ statusEl.className = 'phase-status running';
+ }
+ else {
+ statusEl.textContent = 'pending';
+ statusEl.className = 'phase-status';
+ }
+ });
+
+ // Compute progress bar from phase index (server sends no progress value)
+ const progressFill = document.getElementById('progress-fill');
+ if (progressFill && activeIdx >= 0) {
+ const pct = Math.round((activeIdx / (phaseOrder.length - 1)) * 100);
+ progressFill.style.width = Math.min(pct, 100) + '%';
+ }
+
+ // Reveal the Phase 2 launch button once Phase 1 has completed.
+ // Stays hidden until the phase1_complete (or done) event fires.
+ const phase2Btn = document.getElementById('start-phase2-btn');
+ if (phase2Btn && activeIdx >= phaseOrder.indexOf('phase1_complete')) {
+ phase2Btn.style.display = 'inline-flex';
+ }
+ } catch (e) {
+ console.error('Error updating phase tracker:', e);
+ }
+ }
+
+ function updateStatus(status) {
+ try {
+ const stopBtn = document.getElementById('stop-btn');
+ const viewBtn = document.getElementById('view-results-btn');
+ const progressText = document.getElementById('progress-text');
+ 
+ if (status === 'completed' || status === 'completed_with_errors') {
+ if (stopBtn) stopBtn.style.display = 'none';
+ if (viewBtn) viewBtn.style.display = 'inline-flex';
+ const phase2Btn = document.getElementById('start-phase2-btn');
+ if (phase2Btn) phase2Btn.style.display = 'inline-flex';
+ if (progressText) progressText.textContent = status === 'completed_with_errors' ? 'Scan completed (with errors)' : 'Scan completed!';
+ document.querySelectorAll('.phase-status').forEach(el => { 
+ el.textContent = 'done'; 
+ el.className = 'phase-status done'; 
+ });
+ } else if (status === 'failed') {
+ if (stopBtn) stopBtn.style.display = 'none';
+ if (viewBtn) viewBtn.style.display = 'inline-flex';
+ if (progressText) progressText.textContent = 'Scan failed!';
+ } else if (status === 'stopping') {
+ if (stopBtn) {
+ stopBtn.disabled = true;
+ stopBtn.textContent = 'Stopping...';
+ }
+ if (progressText) progressText.textContent = 'Stopping scan...';
+ }
+ } catch (e) {
+ console.error('Error updating status:', e);
+ }
+ }
+
+ function stopScan() {
+ confirmDialog(`Stop scan for <strong>${target}</strong>?`, 'Stop Scan')
+ .then(confirmed => {
+ if (!confirmed) return;
+ fetch(`/api/scan/${target}/stop`, { method: 'POST' })
+ .then(resp => resp.json())
+ .then(data => {
+ showToast('Scan stopping...');
+ document.getElementById('stop-btn').disabled = true;
+ document.getElementById('stop-btn').textContent = 'Stopping...';
+ })
+ .catch(err => showToast('Failed to stop scan', 'error'));
+ });
+ }
+
+ // Start Phase 2 — enabled once the phase1_complete event fires. Posts to
+ // the Phase 2 start endpoint (foundation stub) and routes the user to the
+ // target detail page, which hosts the Phase 2 handoff + contract data.
+ function startPhase2() {
+ fetch(`/api/phase2/${encodeURIComponent(target)}/start`, { method: 'POST' })
+ .then(resp => resp.json())
+ .then(data => {
+ if (data.error) { showToast(data.error, 'error'); return; }
+ showToast('Phase 1 complete — loading Phase 2 handoff...');
+ setTimeout(() => { window.location.href = `/target/${target}`; }, 800);
+ })
+ .catch(() => showToast('Failed to start Phase 2', 'error'));
+ }
+
+ // Listen for navigation events
+ window.addEventListener('beforeunload', function() {
+ isNavigating = true;
+ if (ws) {
+ ws.close();
+ }
+ });
+
+ // Start immediately, don't wait for existing logs
+ connectWebSocket();
+
+ // ── Phase 1 live findings table (polls the findings API every 2s) ──
+ // Fully additive: does not touch the existing WebSocket listener.
+ const findingsSeen = new Set();
+ let findingsPoll = null;
+
+ async function pollFindings() {
+ if (isNavigating) return;
+ try {
+ const resp = await fetch(`/api/phase1/${encodeURIComponent(target)}/findings`);
+ if (!resp.ok) return;
+ const data = await resp.json();
+ const findings = data.findings || [];
+ const tbody = document.getElementById('findings-tbody');
+ const empty = document.getElementById('findings-empty');
+ const countEl = document.getElementById('finding-count');
+ if (countEl) countEl.textContent = findings.length;
+ if (empty) empty.style.display = findings.length ? 'none' : 'block';
+
+ // Prepend any findings we haven't rendered yet (newest first).
+ let added = 0;
+ for (let i = findings.length - 1; i >= 0; i--) {
+ const f = findings[i];
+ const key = String(f.id || (f.subdomain + '|' + f.tool + '|' + f.name));
+ if (findingsSeen.has(key)) continue;
+ findingsSeen.add(key);
+ added++;
+ const sev = (f.severity || 'info').toLowerCase();
+ const row = document.createElement('tr');
+ row.innerHTML = `
+ <td><span class="status-badge status-${sev}">${sev}</span></td>
+ <td class="host-cell">${escapeHtml(f.subdomain || '-')}</td>
+ <td>${escapeHtml(f.tool || '-')}</td>
+ <td>${escapeHtml(f.name || '-')}</td>
+ <td>${escapeHtml(f.waf || '-')}</td>
+ <td>${new Date().toLocaleTimeString()}</td>
+ `;
+ tbody.insertBefore(row, tbody.firstChild);
+ }
+ // Refresh stats strip from the per-host intel endpoint.
+ refreshStats();
+ } catch (e) { /* ignore transient errors */ }
+ }
+
+ async function refreshStats() {
+ try {
+ const resp = await fetch(`/api/phase1/${encodeURIComponent(target)}/intel`);
+ if (!resp.ok) return;
+ const data = await resp.json();
+ const intel = data.host_intel || [];
+ if (!intel.length) return;
+ const stats = document.getElementById('findings-stats');
+ if (stats) stats.style.display = 'flex';
+ let ports = 0, waf = 0, secrets = 0, js = 0, params = 0;
+ intel.forEach(h => {
+ if (h.has_open_ports) ports += h.open_port_count;
+ if (h.waf && h.waf !== 'none' && h.waf !== '') waf++;
+ if (h.has_secrets) secrets += h.secret_count;
+ if (h.has_js_endpoints) js += h.js_endpoint_count;
+ if (h.has_params) params += h.param_count;
+ });
+ const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+ set('stat-ports', ports); set('stat-waf', waf);
+ set('stat-secrets', secrets); set('stat-js', js); set('stat-params', params);
+ } catch (e) { /* ignore */ }
+ }
+
+ function escapeHtml(s) {
+ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ }
+
+ pollFindings();
+ findingsPoll = setInterval(pollFindings, 2000);
+
+ // Keep progress page alive even when scanning in background
+ setInterval(() => {
+ if (!isNavigating && ws) {
+ // Send a ping to keep connection alive
+ try {
+ if (ws.readyState === WebSocket.OPEN) {
+ ws.send(JSON.stringify({type: 'ping'}));
+ }
+ } catch (e) {
+ // Silently fail
+ }
+ }
+ }, 30000);
+ </script>
+</body>
+</html>

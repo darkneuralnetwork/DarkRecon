@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+ <title>Dark-Recon - Repeater</title>
+ <link rel="stylesheet" href="/static/style.css">
+ <link rel="stylesheet" href="/static/css/repeater.css">
+</head>
+<body>
+ <main class="main-content">
+  <div class="page-header">
+   <div class="page-header-left">
+    <a href="#" id="back-link" class="back-link">← Back to target</a>
+    <h1 id="page-title">Repeater</h1>
+   </div>
+   <div class="page-header-actions" id="page-actions"></div>
+  </div>
+
+  <div id="repeater-shell" class="repeater-shell">
+   <!-- History pane -->
+   <aside class="repeater-history" id="history-pane">
+    <div class="history-header">
+     <span class="history-title">History</span>
+     <button class="btn btn-small btn-secondary" id="new-request-btn" title="New blank request">+ New</button>
+    </div>
+    <div class="history-search">
+     <input type="text" id="history-search" class="filter-input" placeholder="Filter history..." />
+    </div>
+    <div class="history-list" id="history-list">
+     <p class="text-muted history-empty">No saved requests yet.</p>
+    </div>
+   </aside>
+
+   <!-- Editor + Response -->
+   <div class="repeater-main">
+    <!-- Mode tabs: Repeater (single request) vs Intruder (brute force) -->
+    <div class="mode-tabs">
+     <button class="mode-tab active" data-mode="repeater" title="Manual single-request editor">Repeater</button>
+     <button class="mode-tab" data-mode="intruder" title="Brute-force / directory-busting with a wordlist">Intruder</button>
+    </div>
+
+    <!-- ── Repeater mode ─────────────────────────────────────── -->
+    <div id="mode-repeater" class="mode-panel active">
+     <div class="repeater-toolbar">
+      <div class="repeater-meta">
+       <span class="meta-label">Request</span>
+       <span class="meta-value" id="req-id-display">—</span>
+       <span class="meta-sep">·</span>
+       <span class="meta-label">Host</span>
+       <span class="meta-value mono" id="req-host-display">—</span>
+      </div>
+      <div class="repeater-controls">
+       <div class="repeater-options">
+        <select id="method-select" class="method-select" title="HTTP method — updates the request line in the editor">
+         <option value="GET">GET</option>
+         <option value="POST">POST</option>
+         <option value="PUT">PUT</option>
+         <option value="DELETE">DELETE</option>
+         <option value="PATCH">PATCH</option>
+         <option value="HEAD">HEAD</option>
+         <option value="OPTIONS">OPTIONS</option>
+        </select>
+        <label class="repeater-toggle" title="Allow requests to private/loopback IPs (SSRF guard off)">
+         <input type="checkbox" id="opt-allow-internal" /> Allow Internal
+        </label>
+        <label class="repeater-toggle" title="Follow 3xx redirects (up to 5 hops, each re-scoped)">
+         <input type="checkbox" id="opt-follow-redirects" /> Follow Redirects
+        </label>
+       </div>
+       <div class="repeater-divider"></div>
+       <div class="repeater-action-buttons">
+        <button class="btn btn-primary btn-icon" id="send-btn" title="Send request (Ctrl+Enter)">
+         <svg class="btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+         <span>Send</span>
+        </button>
+        <button class="btn btn-secondary btn-icon" id="send-to-intruder-btn" title="Copy this request to the Intruder for brute-forcing">
+         <svg class="btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+         <span>Intruder</span>
+        </button>
+       </div>
+      </div>
+     </div>
+
+     <div class="repeater-panes">
+      <!-- Request pane -->
+      <div class="repeater-pane repeater-request-pane">
+       <div class="pane-header">
+        <span class="pane-title">Request</span>
+        <span class="pane-badge" id="req-size-badge">0 bytes</span>
+       </div>
+       <textarea id="request-editor" class="request-editor" spellcheck="false" placeholder="GET / HTTP/1.1&#10;Host: example.com&#10;&#10;"></textarea>
+      </div>
+
+      <!-- Response pane -->
+      <div class="repeater-pane repeater-response-pane">
+       <div class="pane-header">
+        <span class="pane-title">Response</span>
+        <span class="pane-badge" id="resp-status-badge">—</span>
+        <span class="pane-badge" id="resp-time-badge">—</span>
+       </div>
+       <div class="response-tabs">
+        <button class="resp-tab active" data-resp-tab="raw" title="Full raw response: status line + headers + body">Raw</button>
+        <button class="resp-tab" data-resp-tab="render" title="Render the response body as HTML in a sandboxed iframe">Render</button>
+       </div>
+       <pre class="response-view" id="response-view"><span class="text-muted">No response yet. Send a request to see the response here.</span></pre>
+      </div>
+     </div>
+
+     <!-- Notes -->
+     <div class="repeater-notes">
+      <div class="pane-header">
+       <span class="pane-title">Notes</span>
+       <span class="pane-badge" id="notes-status">saved</span>
+      </div>
+      <textarea id="notes-editor" class="notes-editor" spellcheck="false" placeholder="Notes for this request (auto-saved)..."></textarea>
+     </div>
+    </div><!-- /mode-repeater -->
+
+    <!-- ── Intruder mode (brute force) ───────────────────────── -->
+    <div id="mode-intruder" class="mode-panel">
+     <div class="intruder-config">
+      <div class="intruder-config-row">
+       <label class="intruder-label" for="intruder-wordlist-path">Wordlist</label>
+       <input type="text" id="intruder-wordlist-path" class="intruder-path-input" placeholder="/usr/share/wordlists/seclists/Discovery/Web-Content/common.txt" />
+       <button id="intruder-browse-btn" class="btn btn-secondary btn-small" title="Browse the server filesystem for a wordlist">Browse…</button>
+      </div>
+      <div class="intruder-config-row">
+       <label class="intruder-label" for="intruder-marker">Marker</label>
+       <input type="text" id="intruder-marker" class="marker-input" value="§§" />
+       <span class="intruder-hint">Place <code>§§</code> where the wordlist word goes — e.g. <code>GET /§§ HTTP/1.1</code>. <button id="intruder-mark-path-btn" class="link-btn" title="Replace the request path with the marker">Mark path</button></span>
+      </div>
+      <div class="intruder-config-row">
+       <label class="intruder-label" for="intruder-concurrency">Threads</label>
+       <input type="number" id="intruder-concurrency" class="num-input" value="10" min="1" max="50" />
+       <label class="repeater-toggle" title="Allow requests to private/loopback IPs (SSRF guard off)">
+        <input type="checkbox" id="intruder-allow-internal" /> Allow Internal
+       </label>
+       <label class="repeater-toggle" title="Follow 3xx redirects (up to 5 hops, each re-scoped)">
+        <input type="checkbox" id="intruder-follow-redirects" /> Follow Redirects
+       </label>
+       <span class="intruder-spacer"></span>
+       <button id="intruder-start-btn" class="btn btn-primary btn-icon" title="Start the brute-force attack"><svg class="btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span>Start Attack</span></button>
+       <button id="intruder-stop-btn" class="btn btn-secondary btn-icon" style="display:none;" title="Abort the running attack"><svg class="btn-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg><span>Stop</span></button>
+      </div>
+     </div>
+
+     <div class="intruder-panes">
+      <!-- Request template -->
+      <div class="repeater-pane intruder-template-pane">
+       <div class="pane-header">
+        <span class="pane-title">Request Template</span>
+        <span class="pane-badge" id="intruder-template-size">0 bytes</span>
+       </div>
+       <textarea id="intruder-editor" class="request-editor" spellcheck="false" placeholder="GET /§§ HTTP/1.1&#10;Host: example.com&#10;&#10;The §§ marker is replaced with each wordlist word."></textarea>
+      </div>
+
+      <!-- Results -->
+      <div class="repeater-pane intruder-results-pane">
+       <div class="pane-header">
+        <span class="pane-title">Results</span>
+        <span class="pane-badge" id="intruder-progress">0 / 0</span>
+        <input type="text" id="intruder-filter" class="intruder-filter-input" placeholder="Filter…" />
+        <label class="repeater-toggle intruder-hide404" title="Hide 404 responses — the noise in directory brute-forcing">
+         <input type="checkbox" id="intruder-hide404" checked /> Hide 404
+        </label>
+       </div>
+       <div class="intruder-results-wrap">
+        <table class="intruder-results-table" id="intruder-results-table">
+         <thead>
+          <tr>
+           <th class="col-idx">#</th>
+           <th class="col-word">Word</th>
+           <th class="col-status">Status</th>
+           <th class="col-length">Length</th>
+           <th class="col-time">Time</th>
+          </tr>
+         </thead>
+         <tbody id="intruder-results-body"></tbody>
+        </table>
+        <p id="intruder-empty" class="text-muted intruder-empty">Load a request, pick a wordlist, and Start Attack. Results appear here in real time.</p>
+       </div>
+      </div>
+     </div>
+    </div><!-- /mode-intruder -->
+   </div>
+  </div>
+
+  <div id="repeater-error" class="repeater-error" style="display:none;"></div>
+ </main>
+
+ <script src="/static/app.js"></script>
+ <script src="/static/js/repeater.js"></script>
+</body>
+</html>

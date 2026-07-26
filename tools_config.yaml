@@ -1,0 +1,13 @@
+enabled_tools:
+  subfinder: true
+  ffuf: true
+  httpx: true
+  nuclei: true
+  katana: true
+  subzy: true
+  webanalyze: true
+  nmap: true
+tool_config:
+  nuclei:
+    args: ''
+    phase: ''
