@@ -6,6 +6,8 @@
 
 **A single Go binary that runs the full Phase-1 recon lifecycle — subdomain discovery to a prioritized, exploitation-ready target list — with a live web UI, REST API, and MCP integration for LLM agents.**
 
+![DarkRecon Dashboard](Dashboard.png)
+
 </div>
 
 ---
