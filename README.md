@@ -70,6 +70,7 @@ It's not a script wrapper. It's a full platform: concurrent pipeline engine, SQL
 ![DarkRecon New_scan](New_scan.png)
 ![DarkRecon Scanning](Scanning.png)
 ![DarkRecon Target](Target.png)
+![DarkRecon Proxy](Proxy.png)
 
 
 ## Tools It Drives
