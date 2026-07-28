@@ -67,6 +67,10 @@ It's not a script wrapper. It's a full platform: concurrent pipeline engine, SQL
 **Priority scoring factors:** subdomain keywords (30) · vuln severity (35) · takeover (25) · exposed paths (20) · missing headers (15) · tech-stack risk (12) · param-rich URLs (10) — plus context-aware suggested manual tests.
 
 ---
+![DarkRecon New_scan](New_scan.png)
+![DarkRecon Scanning](Scanning.png)
+![DarkRecon Target](Target.png)
+
 
 ## Tools It Drives
 
