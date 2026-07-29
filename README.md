@@ -97,16 +97,14 @@ Browser / LLM Agent  →  API Layer + MCP  →  Scan Manager  →  Pipeline Engi
 Ships as a single static binary — no external asset dirs.
 
 ```bash
-# Option 1: go install
-go install github.com/yourname/dark-recon/cmd/dark-recon@latest
 
-# Option 2: build from source
+# Option 1: build from source
 git clone https://github.com/darkneuralnetwork/DarkRecon.git
-cd dark-recon
+cd DarkRecon
 make build
 ./dark-recon -port 5000
 
-# Option 3: .deb (recommended, Debian/Ubuntu) — auto-installs prereqs on first launch
+# Option 2: .deb (recommended, Debian/Ubuntu) — auto-installs prereqs on first launch
 ```
 
 Check tools/prereqs:
