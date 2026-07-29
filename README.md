@@ -116,6 +116,8 @@ dark-recon prereqs --install --strict    # also install optional tools
 
 **Requirements:** Linux (amd64/arm64) or macOS, `libc6`, ~50MB disk. Go only needed to install the security tools — the server binary itself is pre-built and static.
 
+default login credential  
+ admin:admin
 ---
 
 ## Configuration
@@ -199,9 +201,7 @@ Example prompt: *"Launch a recon scan against example.com, wait for it to finish
 ├── priority/       # priority_ranking.json, phase2_handoff.json
 ├── reports/report.json
 └── screenshots/
-```
-default login credential 
-  admin:admin 
+``` 
   
 11 SQLite tables (WAL mode, single-writer): `scan_meta`, `subdomains`, `live_hosts`, `tech_detections`, `crawled_urls`, `discovered_dirs`, `vulnerabilities`, `takeover_results`, `screenshots`, `priority_entries`, `header_results`.
 
