@@ -200,7 +200,9 @@ Example prompt: *"Launch a recon scan against example.com, wait for it to finish
 ├── reports/report.json
 └── screenshots/
 ```
-
+default login credential 
+  admin:admin 
+  
 11 SQLite tables (WAL mode, single-writer): `scan_meta`, `subdomains`, `live_hosts`, `tech_detections`, `crawled_urls`, `discovered_dirs`, `vulnerabilities`, `takeover_results`, `screenshots`, `priority_entries`, `header_results`.
 
 ---
